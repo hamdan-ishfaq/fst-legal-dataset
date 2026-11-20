@@ -47,7 +47,7 @@ class StatuteUnit:
 
     @property
     def omitted(self) -> bool:
-        return bool(re.match(r"^\S+\s+\[?\s*Omitted", self.text, re.IGNORECASE))
+        return bool(re.match(r"^\S+\s+(?:\[[^\]]*\]\s*)?\[?\s*Omitted", self.text, re.IGNORECASE))
 
 
 def _clean(text: str) -> str:
