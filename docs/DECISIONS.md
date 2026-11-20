@@ -99,3 +99,40 @@ Decisions that are expensive to change later. New entries go at the bottom. Past
 **Why not the others:** Redis and RabbitMQ add services that are awkward on Windows. ZeroMQ would need the same state tracking built on top.
 **Consequences:** Job payloads carry the prompt and retrieved context, so workers do not need access to private user data. Writes go through one hub process to avoid SQLite write contention.
 **Revisit if:** Job volume causes measurable SQLite write contention, or workers must run on a different network than the hub.
+
+---
+
+## D-006: Query routing — single call for simple questions, RLM for complex ones
+**Date:** 2026-11-20 · **Status:** Accepted
+
+**Context:** The RLM paper reports that RLM performance is "slightly worse on smaller input lengths", which suggests a trade-off between a base model call and an RLM (Zhang et al., Observation 3). The reproduction by Wang (arXiv:2603.02615) found depth-1 RLMs worse than a plain model on simple retrieval. The paper itself has no router: the RLM decides through its own code whether to make sub-calls.
+
+| Option | Good | Bad | Effort |
+|---|---|---|---|
+| Always RLM | One path; matches the paper | Slower and worse on simple look-ups | Low |
+| Always single call (RAG) | Fast | Fails once case papers and retrieved judgments exceed what the model handles well | Low |
+| Router: simple → single call, complex → RLM | Uses each where it is stronger; the threshold can be measured | One more component to test | Medium |
+
+**Decision:** A router in front of the pipeline. A question goes to the single-call path when it is a look-up (a named provision, a named case) or when the question, case papers and retrieved passages fit under a token threshold. Everything else goes to the RLM. The threshold is a configuration value set from measurements on our evaluation set, not assumed.
+**Why:** It follows the trade-off the paper itself reports, and makes it measurable on legal data.
+**Why not the others:** Always-RLM pays the short-input penalty on every simple question. Always-single-call cannot handle long case files.
+**Consequences:** Every run records its route and the reason. The evaluation compares always-single, always-RLM and routed.
+**Revisit if:** Measurements show one path is at least as good on both simple and complex questions.
+
+---
+
+## D-007: RLM scaffold — upstream RLM code and system prompt, extended with legal tools
+**Date:** 2026-11-20 · **Status:** Accepted
+
+**Context:** The model card for `mit-oasys/rlm-qwen3-8b-v0.1` says it "was trained on trajectories produced using a fixed system prompt" and "assumes the environment/scaffold from our RLM repo" (github.com/alexzhang13/rlm). The paper's negative results note that prompts did not transfer well across models. License check: the model is tagged MIT and its base, Qwen3-8B, is Apache-2.0; both permit academic and commercial use. In the paper's implementation all model calls are blocking and sequential; the authors note asynchronous calls could cut runtime substantially but did not implement them.
+
+| Option | Good | Bad | Effort |
+|---|---|---|---|
+| Use the upstream scaffold and system prompt; add legal tools as extra REPL functions; replace the sub-call function with a queue-backed one | Keeps the model in the setting it was trained for | Must track upstream changes | Medium |
+| Write our own scaffold and prompts | Full control | The fine-tuned model sees an unfamiliar setting; likely quality loss | Medium |
+
+**Decision:** Build on the upstream RLM code. Keep its system prompt and conventions, add retrieval tools as REPL functions with a short description appended to the prompt, and replace the blocking sub-call with one that submits to the job queue. Batched sub-calls are submitted together so they can run in parallel across nodes.
+**Why:** The fine-tuned model is only an advantage if it runs in the scaffold it was trained on. Parallel, distributed sub-calls are exactly the part the paper leaves unimplemented.
+**Why not the others:** A custom scaffold throws away the fine-tuning.
+**Consequences:** Prompt additions must be tested against the unmodified prompt (ablation). The upstream repo recommends vLLM; we run it against llama.cpp's OpenAI-compatible server, which must be verified in Phase 3.
+**Revisit if:** The upstream scaffold cannot run against llama.cpp, or the legal-tool additions measurably hurt the fine-tuned model.
