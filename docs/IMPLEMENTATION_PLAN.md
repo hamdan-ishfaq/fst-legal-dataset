@@ -34,6 +34,21 @@ A second layer handles hearings. After each hearing the lawyer records what the 
 | Additional laptops join by hand in one or two steps from a UI | Requirement |
 | Recursive Language Model design from Zhang, Kraska & Khattab (arXiv:2512.24601) | Requirement |
 
+### What the project must show
+
+The evaluation is designed around four claims. Each needs measured evidence, not demonstration alone.
+
+| ID | Claim | How it is tested |
+|---|---|---|
+| H1 | Graph retrieval with an RLM gives more correct and better-supported briefs than standard RAG on the same model | Baseline RAG vs routed graph + RLM on the same gold sets: citation existence, citation support, unsupported-claim rate, retrieval recall |
+| H2 | Adding laptops reduces the time per run | Same runs on 1, 2, … nodes; time per run and speed-up. Controls: one node with parallel server slots, to separate the gain from batching on one GPU and the gain from more machines |
+| H3 | Better hardware and a stronger model improve results without changing the system | Same pipeline with a larger model on stronger hardware (or a larger model offloaded to CPU on this laptop) |
+| H4 | The chosen configuration is the best of the tested options that fit in 6 GB VRAM | Model and quantization sweep under the same pipeline and gold sets (Phase 3.8) |
+
+H4 can only be shown against the candidates tested. The report will state that, list the candidates, and explain why each was chosen.
+
+The RLM paper ran all model calls one after another and names asynchronous sub-calls as a likely way to cut runtime that it did not implement (Zhang et al., Observation 4). H2 tests that idea across machines.
+
 ---
 
 ## 2. Architecture overview
@@ -63,12 +78,13 @@ A second layer handles hearings. After each hearing the lawyer records what the 
 **Request flow for one question:**
 
 1. The lawyer submits a question on a matter. The hub creates a `run`.
-2. The **root call** (master) runs on the hub. Following the RLM design, the lawyer's question and case papers are not pasted into the prompt. They are loaded as variables in a Python REPL. The root model writes code that inspects them, calls retrieval tools and issues sub-calls (`llm_query`).
-3. Each sub-call becomes a **job** in the queue with its prompt and any private context it needs.
-4. Any free node (the hub's local worker or a remote worker) claims a job, retrieves from its own copy of the public corpus, runs the model and posts the answer back.
-5. When the sub-call answers are in, the root call continues its loop and writes the brief.
-6. The **verifier** checks every citation against the corpus and checks that the cited text supports the claim. Unsupported claims are removed or flagged.
-7. The brief, its sources and the full call trace are stored on the run.
+2. The **router** (D-006) sends look-ups and short inputs to a single retrieval-backed call, and everything else to the RLM.
+3. The **root call** (master) runs on the hub. Following the RLM design, the lawyer's question and case papers are not pasted into the prompt. They are loaded as variables in a Python REPL. The root model writes code that inspects them, calls retrieval tools and issues sub-calls (`llm_query`).
+4. Each sub-call becomes a **job** in the queue with its prompt and any private context it needs. Batched sub-calls are queued together so several nodes can work on them at once.
+5. Any free node (the hub's local worker or a remote worker) claims a job, retrieves from its own copy of the public corpus, runs the model and posts the answer back.
+6. When the sub-call answers are in, the root call continues its loop and writes the brief.
+7. The **verifier** checks every citation against the corpus and checks that the cited text supports the claim. Unsupported claims are removed or flagged.
+8. The brief, its sources and the full call trace are stored on the run.
 
 With one laptop, the same flow runs with only the local worker, so jobs are processed one after another.
 
@@ -218,13 +234,20 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 **Goal:** RLM-Qwen3-8B running on the laptop through `llama-server`, reproducibly, with measured speed and memory.
 
 **Tasks**
-- 3.1 Check the license and model card of `mit-oasys/rlm-qwen3-8b-v0.1` and record the result in DECISIONS.md.
+- 3.1 ~~Check the license~~ Done: the model is tagged MIT, its base Qwen3-8B is Apache-2.0 (D-007). The model card says it expects the upstream RLM scaffold and fixed system prompt.
 - 3.2 Download the bf16 weights, convert to GGUF and quantize (start with Q4_K_M; compare one higher-precision quant if memory allows). Record the file hash.
 - 3.3 Configure `llama-server`: GPU layer offload for 6 GB VRAM, context length, KV-cache type, number of slots (the root call and a sub-call may need to coexist on one node).
 - 3.4 Benchmark on this laptop: prompt processing and generation tokens per second, peak VRAM and RAM, at the context sizes the RLM loop uses.
 - 3.5 Fallback path: base Qwen3-8B GGUF with the same server config, selectable in `config/`.
 - 3.6 Thin client in `llm/` with timeouts, retries and token accounting; every call logged with prompt, response, model hash and timings.
 - 3.7 Quality check after quantization: run a fixed set of prompts on the quantized and (where it fits on CPU) unquantized model and compare.
+- 3.8 **6 GB model sweep (H4):** run the same pipeline and gold sets with each candidate that fits this laptop, and choose the default from the results. Candidates:
+  - RLM-Qwen3-8B at Q4_K_M and one higher quant (Q5_K_M or Q6_K) with more CPU offload
+  - Base Qwen3-8B at the same quants (shows what the RLM fine-tune adds)
+  - Qwen3-4B at Q8 (smaller model that fits fully in VRAM with a long context)
+  - Qwen3-14B at Q4 with heavy CPU offload (shows the quality gain from a larger model at a speed cost; also feeds H3)
+  - Other open models of similar size released by the time of the sweep, added if they fit and support the tool-use format
+- 3.9 Check that the upstream RLM scaffold runs against `llama-server`'s OpenAI-compatible API (the upstream repo recommends vLLM).
 
 **Outputs:** model files with hashes, server launch script, benchmark table, LLM client.
 
@@ -258,8 +281,15 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 
 **Goal:** The RLM loop from Zhang et al.: the root model works through a REPL holding the case material as variables, calls retrieval tools and issues sub-calls through the job queue.
 
-**5A. REPL environment**
-- 5.1 Variables loaded into the REPL: the question, the matter's case papers (as text, split by document), and run metadata. The full text is never pasted into the root prompt.
+**5.0 Router (D-006)**
+- 5.0.1 Classify the question as a look-up (names a specific provision or case) or an analysis question.
+- 5.0.2 Estimate input size: question + case papers + top retrieved passages, in tokens.
+- 5.0.3 Look-ups and inputs under the threshold go to the Phase 4 single-call path; the rest go to the RLM. The threshold is set from the Phase 10 routing experiment.
+- 5.0.4 The route and its reason are stored on the run.
+
+**5A. REPL environment (D-007)**
+- 5.1 Start from the upstream RLM code (github.com/alexzhang13/rlm) and keep its system prompt and conventions, which the fine-tuned model was trained on.
+- 5.1a Variables loaded into the REPL: the question, the matter's case papers (as text, split by document), and run metadata. The full text is never pasted into the root prompt.
 - 5.2 Tools exposed in the REPL: the Phase 2 retrieval API, `llm_query(prompt)` and a batched form that submits several sub-calls at once and waits for all of them.
 - 5.3 Sandbox: model-written code runs in a separate process with a time limit, an output-size limit, no network, no file-system access and only whitelisted modules. Tool calls cross the process boundary through a small RPC layer, and every tool call is scoped to the current user and matter.
 - 5.4 Recursion depth limited to 1 by default (sub-calls are plain model calls and cannot recurse). The reproduction study by Wang (arXiv:2603.02615) found that deeper recursion degraded results; depth 2 is kept as an experiment flag only.
@@ -394,11 +424,14 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 - System: time per run, jobs per run, speed-up from one node to two nodes, behaviour when a worker fails.
 
 **Experiments**
-- Baseline RAG (Phase 4) vs RLM (Phase 5) vs RLM + verification (Phase 6).
+- H1: Baseline RAG (Phase 4) vs RLM (Phase 5) vs RLM + verification (Phase 6), all on the same model.
+- Routing: always single call vs always RLM vs routed; sweep the routing threshold.
 - Retrieval variants: BM25 / dense / hybrid / hybrid + graph.
+- Scaffold: upstream system prompt alone vs with legal-tool additions.
 - Recursion depth 1 vs 2.
-- Model quantization level.
-- One node vs two nodes.
+- H2: 1 node vs 2 nodes (and more if available), with one node with 2 server slots as a control. Report speed-up against the share of each run that must stay sequential (the root turns).
+- H3: the same pipeline with a larger model, on stronger hardware if available or with CPU offload here.
+- H4: the 6 GB model and quantization sweep from Phase 3.8.
 
 **Outputs:** `eval/` runner that produces a report from a config; results tables for the final report.
 
