@@ -7,12 +7,11 @@ files already complete are skipped.
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import tomllib
 import zipfile
 from pathlib import Path
-
-import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "runtime"
@@ -20,22 +19,12 @@ CONFIG = tomllib.loads((ROOT / "config" / "runtime.toml").read_text(encoding="ut
 
 
 def download(url: str, dest: Path) -> None:
+    """Download with resume. Uses curl, which is far faster than a Python
+    client against the Hugging Face CDN on this network."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     part = dest.with_name(dest.name + ".part")
-    done = part.stat().st_size if part.exists() else 0
-    headers = {"Range": f"bytes={done}-"} if done else {}
-    with httpx.stream("GET", url, headers=headers, follow_redirects=True, timeout=60) as r:
-        if r.status_code == 416:  # already complete
-            part.replace(dest)
-            return
-        r.raise_for_status()
-        total = done + int(r.headers.get("content-length", 0))
-        with part.open("ab" if done else "wb") as f:
-            for i, chunk in enumerate(r.iter_bytes(1 << 20)):
-                f.write(chunk)
-                done += len(chunk)
-                if i % 256 == 0:
-                    print(f"  {dest.name}: {done / 1e9:.2f} / {total / 1e9:.2f} GB", flush=True)
+    subprocess.run(["curl", "-L", "--fail", "--retry", "5", "-C", "-", "-o", str(part), url],
+                   check=True)
     part.replace(dest)
 
 
