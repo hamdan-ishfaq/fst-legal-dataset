@@ -1,0 +1,26 @@
+# Pinned model runtime and weights. scripts/fetch_runtime.py downloads these into runtime/.
+# Every node in the cluster must run the same versions (Decision D-002).
+
+[llama_cpp]
+tag = "b12588"
+assets = [
+    "llama-b12588-bin-win-cuda-13.5-x64.zip",
+    "cudart-llama-bin-win-cuda-13.5-x64.zip",
+]
+
+[models.embedding]
+repo = "Qwen/Qwen3-Embedding-0.6B-GGUF"
+revision = "main"
+files = ["Qwen3-Embedding-0.6B-Q8_0.gguf"]
+
+[models.rlm]
+# Official bf16 weights; converted and quantized locally (scripts/quantize_rlm.py)
+repo = "mit-oasys/rlm-qwen3-8b-v0.1"
+revision = "171c96639865d559206cd7ef78c4d8188a91992a"
+files = [
+    "config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json",
+    "special_tokens_map.json", "added_tokens.json", "vocab.json", "merges.txt",
+    "chat_template.jinja", "model.safetensors.index.json",
+    "model-00001-of-00004.safetensors", "model-00002-of-00004.safetensors",
+    "model-00003-of-00004.safetensors", "model-00004-of-00004.safetensors",
+]

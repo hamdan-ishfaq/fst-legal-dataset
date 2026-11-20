@@ -1,14 +1,20 @@
-"""Build a clean dataset of fully enriched FST cases from fst_cases_v4.csv.
+"""Build a clean dataset of fully enriched FST cases.
 
-Keeps only cases whose judgment text and LLM-derived fields are present,
-normalises types and outcomes, and writes fst_cases_clean.csv. The source
-file is left untouched.
+Keeps only cases whose judgment text and enrichment fields are present and
+valid, normalises types and outcomes, and writes fst_cases_clean.csv. The
+source file is left untouched. Rows that are dropped are counted by reason.
+
+Usage: python dataset/clean_dataset.py [--src FILE] [--out FILE]
 """
+import argparse
 import json
 import os
 import re
+from collections import Counter
 
 import pandas as pd
+
+from fstlegal.corpus.outcomes import normalize_outcome
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'fst_cases_v4.csv')
@@ -22,13 +28,6 @@ JSON_COLS = ['bench_members', 'questions_json', 'laws_json', 'precedents_json']
 # Their laws/precedents are still usable; their outcome is not reliable.
 TRUNCATED_SITE_IDS = {196802, 196007, 194790}
 
-OUTCOME_MAP = {
-    'allowed': 'allowed',
-    'appeal accepted.': 'allowed',
-    'dismissed': 'dismissed',
-    'appeal disposed of.': 'disposed_of',
-    'order accordingly.': 'disposed_of',
-}
 
 
 def clean_text(s):
@@ -46,12 +45,33 @@ def parse_date(s):
     return None if pd.isna(d) else d.date().isoformat()
 
 
+def valid_json(value):
+    try:
+        json.loads(value)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def main():
-    df = pd.read_csv(SRC, encoding='utf-8-sig')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--src', default=SRC)
+    parser.add_argument('--out', default=OUT)
+    args = parser.parse_args()
+
+    df = pd.read_csv(args.src, encoding='utf-8-sig')
+    dropped = Counter()
 
     keep = df['enriched'] == 1
+    dropped['not enriched'] = int((~keep).sum())
     for c in REQUIRED:
-        keep &= df[c].notna() & (df[c].astype(str).str.strip() != '')
+        missing = keep & (df[c].isna() | (df[c].astype(str).str.strip() == ''))
+        dropped[f'missing {c}'] = int(missing.sum())
+        keep &= ~missing
+    for c in JSON_COLS:
+        bad = keep & ~df[c].map(valid_json)
+        dropped[f'invalid JSON in {c}'] = int(bad.sum())
+        keep &= ~bad
     df = df.loc[keep].copy()
 
     for c in df.select_dtypes(include=['object', 'str']).columns:
@@ -63,10 +83,8 @@ def main():
         df[c] = df[c].map(lambda v: json.dumps(json.loads(v), ensure_ascii=False))
 
     df['outcome_raw'] = df['outcome']
-    df['outcome'] = df['outcome'].str.lower().map(OUTCOME_MAP)
-    unmapped = df.loc[df['outcome'].isna(), 'outcome_raw'].unique()
-    if len(unmapped):
-        raise ValueError(f'Unmapped outcomes: {list(unmapped)}')
+    df['outcome'] = df['outcome'].map(normalize_outcome)
+    unknown = df.loc[df['outcome'] == 'unknown', 'outcome_raw'].unique()
 
     df['decision_date'] = df['decision_date'].map(parse_date)
     df['year'] = df['year'].astype('Int64')
@@ -78,8 +96,14 @@ def main():
     df = df.drop(columns=['enriched', 'notes'])
     df = df.drop_duplicates(subset='citation').sort_values(['year', 'id'], ascending=[False, True])
 
-    df.to_csv(OUT, index=False, encoding='utf-8-sig')
-    print(f'Wrote {len(df)} cases -> {OUT}')
+    df.to_csv(args.out, index=False, encoding='utf-8-sig')
+    print(f'Wrote {len(df)} cases -> {args.out}')
+    for reason, n in dropped.items():
+        if n:
+            print(f'  dropped {n}: {reason}')
+    print('  outcomes: ' + ', '.join(f'{k} {v}' for k, v in df['outcome'].value_counts().items()))
+    if len(unknown):
+        print(f'  outcome wording not recognised (labelled unknown): {list(unknown)[:10]}')
 
 
 if __name__ == '__main__':
