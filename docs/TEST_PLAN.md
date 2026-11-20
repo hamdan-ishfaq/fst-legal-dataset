@@ -116,7 +116,7 @@ Every result is saved with the corpus hash, model hash and command that produced
 
 ### 3.3 Results so far
 
-Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports/retrieval_baseline.md)): BM25 recall@10 0.226, BM25 + graph 0.666, popularity control 0.726. The graph more than doubles keyword recall, but at this corpus size the popularity control is still ahead, so NFR-3 is not yet met. The test is re-run at full corpus size.
+Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports/retrieval_baseline.md)): recall@10 BM25 0.226, dense 0.231, hybrid 0.263, hybrid + graph 0.453, BM25 + graph 0.666, popularity control 0.726. The graph more than doubles keyword recall, but at this corpus size the popularity control is still ahead, so NFR-3 is not yet met. The test is re-run at full corpus size.
 
 ---
 
