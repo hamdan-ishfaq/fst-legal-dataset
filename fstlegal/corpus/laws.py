@@ -68,7 +68,8 @@ ACTS: tuple[Act, ...] = (
 ACTS_BY_ID = {a.id: a for a in ACTS}
 
 _UNIT_WORDS = r"(?:fundamental\s+rules?|articles?|sections?|rules?|regulations?|arts?\.|ss?\.)"
-_NUMBER = r"\d+(?:-?[A-Z]{1,2})?"
+# Up to three digits, so the year in "Rules, 1973" is not read as rule 1973.
+_NUMBER = r"\d{1,3}(?!\d)(?:-?[A-Z]{1,2})?"
 _SUBPARTS = r"(?:\s*\([0-9a-zA-Z]{1,5}\))*"
 _UNIT_RE = re.compile(
     rf"(?:{_UNIT_WORDS})\s*(?P<num>{_NUMBER})(?P<sub>{_SUBPARTS})", re.IGNORECASE)

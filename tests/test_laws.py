@@ -26,6 +26,8 @@ from fstlegal.corpus.laws import resolve
     # name split across both fields by the scraper
     ("Civil Servants (Appointment", "Promotion and Transfer) Rules, 1973", "CS-APT-1973", []),
     ("Civil Servants Act", "1973", "CSA-1973", []),
+    # the year is not a rule number
+    ("Government Servants (Efficiency and Discipline) Rules, 1973", "", "ED-1973", []),
 ])
 def test_resolve(provision, act, expected_act, expected_units):
     ref = resolve(provision, act)
