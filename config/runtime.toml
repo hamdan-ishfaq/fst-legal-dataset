@@ -24,3 +24,9 @@ files = [
     "model-00001-of-00004.safetensors", "model-00002-of-00004.safetensors",
     "model-00003-of-00004.safetensors", "model-00004-of-00004.safetensors",
 ]
+
+[models.qwen3_8b]
+# Base Qwen3-8B: fallback model and the "without RLM fine-tune" comparison (D-002, H4)
+repo = "Qwen/Qwen3-8B-GGUF"
+revision = "7c41481f57cb95916b40956ab2f0b139b296d974"
+files = ["Qwen3-8B-Q4_K_M.gguf"]
