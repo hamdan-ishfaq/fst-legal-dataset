@@ -4,3 +4,10 @@ __pycache__/
 *.pyc
 dataset/fst_cases_v*.csv
 dataset/fst_judgments.csv
+
+# build outputs
+data/build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+models/
