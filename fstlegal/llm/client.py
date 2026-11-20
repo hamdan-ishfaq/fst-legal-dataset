@@ -24,11 +24,14 @@ class ChatClient:
     temperature: float = 0.2
     max_tokens: int = 2048
     timeout: float = 1800
+    # Qwen3 thinks before answering unless told not to; structured outputs do not need it
+    extra_body: dict = field(
+        default_factory=lambda: {"chat_template_kwargs": {"enable_thinking": False}})
     log: list[dict] = field(default_factory=list)  # every call, for the run trace
 
     def complete(self, messages: list[dict], json_schema: dict | None = None) -> Completion:
         body = {"model": self.model, "messages": messages, "temperature": self.temperature,
-                "max_tokens": self.max_tokens}
+                "max_tokens": self.max_tokens, **self.extra_body}
         if json_schema:
             body["response_format"] = {"type": "json_schema",
                                        "json_schema": {"name": "output", "schema": json_schema}}

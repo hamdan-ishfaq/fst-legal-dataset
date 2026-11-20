@@ -30,3 +30,20 @@ files = [
 repo = "Qwen/Qwen3-8B-GGUF"
 revision = "7c41481f57cb95916b40956ab2f0b139b296d974"
 files = ["Qwen3-8B-Q4_K_M.gguf"]
+
+# llama-server settings for the reference laptop (RTX 4050, 6 GB VRAM).
+[serve.chat]
+model = "qwen3_8b"            # key under [models]; switch to the quantized RLM model when built
+port = 8080
+ctx_size = 8192
+gpu_layers = 28               # layers on the GPU; the rest run on the CPU
+parallel = 1                  # server slots; 2 is the one-node control for H2
+extra = ["--flash-attn", "on", "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "--jinja"]
+
+[serve.embedding]
+model = "embedding"
+port = 8081
+ctx_size = 2048
+gpu_layers = 0                # embeddings run on the CPU so the chat model keeps the GPU
+parallel = 2
+extra = ["--embedding", "--pooling", "last"]

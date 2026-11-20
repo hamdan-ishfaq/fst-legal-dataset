@@ -62,3 +62,26 @@ def test_end_to_end_with_fake_model():
     assert brief.sections["similar_cases"] == []  # invented citation removed
     assert brief.sources["S1"].ref_id in corpus.unit_ids()
     assert "SOURCES:" in llm.seen[1]["content"]
+
+
+@pytest.mark.model
+def test_baseline_on_live_model():
+    """Needs `python scripts/serve.py chat` running."""
+    import httpx
+
+    from fstlegal.llm.client import ChatClient
+    from fstlegal.retrieval.hybrid import Retriever
+    from fstlegal.retrieval.store import Corpus
+    try:
+        httpx.get("http://127.0.0.1:8080/health", timeout=2).raise_for_status()
+    except httpx.HTTPError:
+        pytest.skip("llama-server not running")
+    corpus = Corpus()
+    brief = answer("Can a civil servant be dismissed from service without a regular inquiry?",
+                   corpus, Retriever(corpus), ChatClient())
+    kept = [c for s in SECTIONS for c in brief.sections[s]]
+    assert kept, "the model returned no supported claims"
+    for claim in kept:
+        for label in claim["sources"]:
+            ref = brief.sources[label].ref_id
+            assert ref in corpus.unit_ids() or corpus.judgment(ref)
