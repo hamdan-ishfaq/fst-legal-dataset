@@ -4,6 +4,8 @@ Structured dataset of Federal Service Tribunal (Pakistan) judgments from pakista
 
 - `dataset/fst.db`: SQLite database, 2278 cases (1975–2026)
 - `dataset/fst_cases.csv`: full CSV export of the `cases` table
+- `dataset/fst_cases_clean.csv`: fully enriched cases only, normalized (built by `dataset/clean_dataset.py`)
+- `docs/`: implementation plan, architecture decisions and literature review
 
 ## Layout
 
