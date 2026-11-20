@@ -22,6 +22,7 @@ include = ["fstlegal*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "data: needs the local corpus sources",
     "model: needs a running llama-server",
