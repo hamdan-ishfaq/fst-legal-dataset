@@ -91,19 +91,20 @@ With one laptop, the same flow runs with only the local worker, so jobs are proc
 ### Repository layout (target)
 
 ```
-fst-legal/
-├── dataset/            # existing scraping, enrichment and cleaning scripts
-├── corpus/             # statute ingestion, normalization, chunking, graph build
-├── retrieval/          # BM25, vector, graph expansion, hybrid ranking
-├── llm/                # llama-server client, prompts, model config
-├── rlm/                # orchestrator, REPL sandbox, tools, final-answer parsing
-├── verify/             # citation and support checks
-├── cluster/            # queue, leases, worker registry, pairing, worker agent
-├── app/                # FastAPI backend: auth, matters, uploads, runs, reminders
-├── web/                # React frontend
-├── eval/               # gold sets, metrics, experiment runner, reports
-├── tests/              # unit and integration tests mirroring the packages above
-└── docs/               # SRS, SDS, test plan, decisions, literature review
+├── dataset/            # scraping, enrichment and cleaning scripts
+├── data/sources/       # official Constitution and statute texts
+├── fstlegal/
+│   ├── corpus/         # parsing, normalization, chunking, corpus build
+│   ├── retrieval/      # BM25, embeddings, graph, hybrid ranking
+│   ├── llm/            # llama-server client
+│   ├── pipeline/       # baseline pipeline, router, RLM orchestrator
+│   ├── verify/         # citation and support checks
+│   ├── cluster/        # queue, leases, worker registry, pairing, worker agent
+│   ├── app/            # FastAPI backend
+│   └── eval/           # gold sets, metrics, experiment runner
+├── web/                # frontend
+├── tests/
+└── docs/               # SRS, SDS, test plan, decisions, literature review, reports
 ```
 
 ---
