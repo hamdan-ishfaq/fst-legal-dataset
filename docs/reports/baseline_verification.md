@@ -32,5 +32,5 @@ Per-run numbers: `baseline_verification.json`.
 ## Reading
 
 - No kept claim cites a source that was not given; the check removes about one claim in seven, so it is doing real work.
-- Gold provision recall (0.27) is bounded by retrieval: the brief can only cite what the retriever supplies (retrieval R@10 is 0.53 with BM25 + graph). This is the figure the RLM pipeline has to improve on (H1).
+- Gold provision recall (0.27) is bounded by retrieval: the brief can only cite what the retriever supplies (the brief gets 6 units from BM25 + graph, whose R@5 is 0.35). This is the figure the RLM pipeline has to improve on (H1).
 - 42 s per brief on one laptop is the single-node reference point for the latency comparison (H2).
