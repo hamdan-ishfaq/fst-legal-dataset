@@ -62,7 +62,7 @@ class Brief:
     invalid_citations: list[str] = field(default_factory=list)
 
 
-def _unit_citation(corpus: Corpus, unit_id: str) -> str:
+def unit_citation(corpus: Corpus, unit_id: str) -> str:
     act_id, unit = unit_id.split(":")
     kind, number = unit.split("-", 1)
     word = {"art": "Article", "s": "Section", "r": "Rule", "fr": "FR"}.get(kind, kind)
@@ -77,7 +77,7 @@ def gather_sources(corpus: Corpus, retriever: Retriever, question: str,
     for i, r in enumerate(statutes, 1):
         unit = corpus.unit(r.id)
         if unit:
-            sources.append(Source(f"S{i}", r.id, _unit_citation(corpus, r.id),
+            sources.append(Source(f"S{i}", r.id, unit_citation(corpus, r.id),
                                   f"{unit['title']}: {unit['text'][:1500]}"))
     for i, r in enumerate(retriever.search_cases(question, n_cases, exclude), 1):
         j = corpus.judgment(r.id)
