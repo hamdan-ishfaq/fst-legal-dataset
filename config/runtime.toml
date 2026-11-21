@@ -36,9 +36,9 @@ files = ["Qwen3-8B-Q4_K_M.gguf"]
 model = "qwen3_8b"            # key under [models]; switch to the quantized RLM model when built
 port = 8080
 ctx_size = 8192
-gpu_layers = 28               # layers on the GPU; the rest run on the CPU
+gpu_layers = 99               # all 36 layers fit in 6 GB at this context size
 parallel = 1                  # server slots; 2 is the one-node control for H2
-extra = ["--flash-attn", "on", "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "--jinja"]
+extra = ["--flash-attn", "on", "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "--jinja", "--load-mode", "none"]
 
 [serve.embedding]
 model = "embedding"
