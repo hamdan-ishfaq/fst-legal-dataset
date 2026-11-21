@@ -33,10 +33,33 @@ Per-run numbers: `baseline_verification.json`, `rlm_verification.json`.
 - The RLM barely delegates (0.8 sub-calls per run): base Qwen3-8B reads and searches itself instead of handing judgments to sub-calls, so the queue has little to distribute.
 - Most removed claims cite provisions the model saw mentioned inside a judgment's text but never retrieved itself; the check correctly removes them, which also lowers gold recall.
 - Most of the RLM's time is the root model's thinking before each turn (about 32 tokens/s on this GPU).
-- These questions come with no case papers, so the baseline's single prompt already holds everything relevant. The RLM's claimed advantage (H1) is on material too long for one prompt; that test set is not built yet.
+- These questions come with no case papers, so the baseline's single prompt already holds everything relevant. The RLM's claimed advantage (H1) is on material too long for one prompt, which the next section tests.
+
+## Long case files (14 judgments)
+
+Each question comes with a case file: the hidden judgment's own text up to its order (15k–48k characters, mean 25.6k). The baseline can fit only the first 9,000 characters (`PAPER_CHARS`); the RLM gets the whole file in `context`.
+
+```
+python -m fstlegal.eval.baseline_check --long --out docs/reports/baseline_long.json
+python -m fstlegal.eval.baseline_check --long --pipeline rlm --out docs/reports/rlm_long.json
+```
+
+| Metric | Baseline, Qwen3-8B | RLM, Qwen3-8B |
+|---|---|---|
+| Runs with a brief | 13 / 14 (one answer cut off at the context limit) | 14 / 14 |
+| Mean claims kept per brief | 14.0 | 6.7 |
+| Claims removed for an invalid source | 21.6% | 22.3% |
+| Gold provision recall | **0.171** | 0.106 |
+| Mean time per brief | **47 s** | 150 s |
+| Mean tokens per brief | 7,534 | 23,936 |
+| Mean root turns / sub-calls | 1 / 0 | 6.1 / 0 |
+
+The RLM's citation existence rate in `rlm_long.json` reads 0.93 because the checker then counted citations to the case file (`paper:case_file`) as missing; this was fixed after the run and all its cited ids do exist.
+
+- With long input the RLM's removal rate falls to the baseline's level and it always produces a brief; the baseline once ran out of window before closing its answer.
+- The base model still never delegates (0 sub-calls): it reads the case file itself. Delegation is what the fine-tune was trained to do, so the fine-tuned run is the real test of H1.
 
 ## Next
 
-1. Same run with the RLM fine-tune.
+1. Same two runs with the RLM fine-tune (community Q4_K_M, `rlm_community`); then one table: baseline vs RLM base vs RLM fine-tuned, short and long.
 2. Write the final brief with one schema-constrained call over the RLM's notes; feed graph-expanded provisions into the RLM's context.
-3. A test set with case papers, where the RLM's long-context handling matters.
