@@ -65,9 +65,14 @@ def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool =
             extra = {"status": result.status, "reason": result.reason, "turns": result.turns,
                      "subcalls": result.subcalls, "tokens": result.tokens}
         else:
-            brief = answer(question, corpus, retriever, llm, papers, exclude={jid})
+            try:
+                brief = answer(question, corpus, retriever, llm, papers, exclude={jid})
+            except json.JSONDecodeError:  # the window filled up before the JSON closed
+                brief = None
             call = llm.log[-1]
             extra = {"tokens": call["prompt_tokens"] + call["completion_tokens"]}
+            if brief is None:
+                extra["reason"] = "answer cut off at the context limit"
         seconds = time.perf_counter() - start
         if brief is None:
             rows.append({"judgment": jid, "question": question, "claims_kept": 0,
@@ -78,7 +83,8 @@ def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool =
             continue
         kept = [c for s in SECTIONS for c in brief.sections[s]]
         cited = {brief.sources[label].ref_id for c in kept for label in c["sources"]}
-        exists = all(ref in corpus.unit_ids() or corpus.judgment(ref) for ref in cited)
+        exists = all(ref.startswith("paper:") or ref in corpus.unit_ids() or corpus.judgment(ref)
+                     for ref in cited)
         rows.append({
             "judgment": jid, "question": question, "claims_kept": len(kept),
             "claims_removed": len(brief.dropped_claims),
