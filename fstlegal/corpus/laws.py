@@ -67,6 +67,20 @@ ACTS: tuple[Act, ...] = (
 
 ACTS_BY_ID = {a.id: a for a in ACTS}
 
+
+@dataclass(frozen=True)
+class Replacement:
+    """One set of rules repealed and replaced by another."""
+    old: str
+    new: str
+    on: str  # ISO date the new rules took effect
+    instrument: str
+
+
+REPLACEMENTS: tuple[Replacement, ...] = (
+    Replacement("ED-1973", "ED-2020", "2020-12-11", "S.R.O. 1331(I)/2020"),
+)
+
 _UNIT_WORDS = r"(?:fundamental\s+rules?|articles?|sections?|rules?|regulations?|arts?\.|ss?\.)"
 # Up to three digits, so the year in "Rules, 1973" is not read as rule 1973.
 _NUMBER = r"\d{1,3}(?!\d)(?:-?[A-Z]{1,2})?"

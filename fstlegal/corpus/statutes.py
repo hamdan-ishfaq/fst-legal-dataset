@@ -19,8 +19,8 @@ from .laws import ACTS_BY_ID
 MAX_UNIT_GAP = 4  # largest jump in unit numbers accepted as the next unit
 
 _UNIT_START = re.compile(
-    r"^(?:\d{1,2}\[)?(\d{1,3})\s?([A-Z]{0,2})\.\s+(?P<rest>(?:\d{1,2}\[)?[A-Z\[].*)$")
-_TITLE = re.compile(r"^\[?([^—⎯_]{2,150}?)\s*\.?\s*(?:—|⎯|_{2,}|\.\s|\.$|-{2}|\])")
+    r"^(?:\d{1,2}\[)?(\d{1,3})\s?-?([A-Z]{0,2})\.\s+(?P<rest>(?:\d{1,2}\[)?[A-Z\[].*)$")
+_TITLE = re.compile(r"^\[?([^—⎯_]{2,200}?)\s*\.?\s*(?:—|⎯|_{2,}|\.\s?-|\.\s|\.$|-{2}|\])")
 _CHAPTER = re.compile(r"^CHAPTER\s+([IVXLC]+)\b", re.IGNORECASE)
 _FOOTNOTE = re.compile(
     r"^\d{1,2}\s*(?:Subs|Ins|Added|Omitted|For\b|Rep|See|Re-?numbered|The\s+words|Words|"
@@ -91,8 +91,8 @@ def _heading_continues(previous: str, line: str) -> bool:
     followed by authority where inquiry is" + "necessary.—(1) ..."."""
     return (bool(re.match(r"^(?:\d{1,2}\[)?\d{1,3}\s?[A-Z]{0,2}\.\s+[A-Z]", previous))
             and not _HEADING_END.search(previous)
-            and len(previous) < 90
-            and bool(_HEADING_END.search(line[:60])))
+            and len(previous) < 120
+            and bool(_HEADING_END.search(line[:80])))
 
 
 def _unit_start(line: str, last: int, previous: str) -> tuple[str, str, str] | None:

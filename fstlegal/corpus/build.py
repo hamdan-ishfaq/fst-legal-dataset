@@ -12,14 +12,17 @@ import json
 import re
 import sqlite3
 from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import sources
+from .amendments import parse_amendment
 from .chunking import judgment_chunks, statute_chunks
 from .citations import citation_key
 from .constitution import parse_constitution
+from .estacode import parse_estacode
 from .judgments import Judgment, load_judgments
-from .laws import ACTS, ACTS_BY_ID
+from .laws import ACTS, ACTS_BY_ID, REPLACEMENTS
 from .statutes import StatuteUnit, parse_statute
 
 DEFAULT_OUT = sources.ROOT / "data" / "build" / "corpus.db"
@@ -27,7 +30,11 @@ DEFAULT_OUT = sources.ROOT / "data" / "build" / "corpus.db"
 SCHEMA = """
 CREATE TABLE acts (
     id TEXT PRIMARY KEY, title TEXT NOT NULL, unit_kind TEXT NOT NULL,
-    has_text INTEGER NOT NULL, edition TEXT
+    has_text INTEGER NOT NULL, edition TEXT, made_by TEXT, replaced_by TEXT, replaced_on TEXT
+);
+CREATE TABLE amendments (
+    act_id TEXT NOT NULL REFERENCES acts(id), unit_id TEXT, kind TEXT NOT NULL,
+    instrument TEXT NOT NULL, date TEXT, effective TEXT, year INTEGER, note TEXT NOT NULL
 );
 CREATE TABLE statute_units (
     id TEXT PRIMARY KEY, act_id TEXT NOT NULL REFERENCES acts(id), number TEXT NOT NULL,
@@ -73,9 +80,17 @@ def judge_id(name: str) -> str:
     return "JUDGE:" + "-".join(bare.split())
 
 
-def _load_statutes() -> tuple[list[StatuteUnit], dict[str, str]]:
-    units: list[StatuteUnit] = []
-    editions: dict[str, str] = {}
+@dataclass
+class _Statutes:
+    units: list[StatuteUnit] = field(default_factory=list)
+    editions: dict[str, str] = field(default_factory=dict)
+    made_by: dict[str, str] = field(default_factory=dict)
+    unplaced_notes: dict[str, list[str]] = field(default_factory=dict)
+
+
+def _load_statutes() -> _Statutes:
+    loaded = _Statutes()
+    units, editions = loaded.units, loaded.editions
     for art in parse_constitution(sources.CONSTITUTION_PDF):
         u = StatuteUnit("CONST-1973", art.number, art.title, art.chapter, art.text, art.footnotes)
         u.part = art.part  # type: ignore[attr-defined]
@@ -85,15 +100,31 @@ def _load_statutes() -> tuple[list[StatuteUnit], dict[str, str]]:
         units.extend(parse_statute(src.path, src.act_id, src.header, src.noise,
                                    src.unnumbered_headings))
         editions[src.act_id] = src.edition
-    return units, editions
+    for est in sources.ESTACODE_RULES:
+        rules = parse_estacode(sources.ESTACODE_PDF, est.act_id, est.first_page, est.last_page)
+        units.extend(rules.units)
+        editions[est.act_id] = sources.ESTACODE_EDITION
+        loaded.made_by[est.act_id] = rules.authority
+        loaded.unplaced_notes[est.act_id] = rules.unplaced_footnotes
+    return loaded
 
 
-def _insert_statutes(con, units: list[StatuteUnit], editions: dict[str, str]) -> None:
+def _insert_statutes(con, loaded: _Statutes) -> None:
+    replaced = {r.old: r for r in REPLACEMENTS}
     for act in ACTS:
-        con.execute("INSERT INTO acts VALUES (?,?,?,?,?)",
-                    (act.id, act.title, act.unit_kind, int(act.id in editions),
-                     editions.get(act.id)))
-    for u in units:
+        r = replaced.get(act.id)
+        con.execute("INSERT INTO acts VALUES (?,?,?,?,?,?,?,?)",
+                    (act.id, act.title, act.unit_kind, int(act.id in loaded.editions),
+                     loaded.editions.get(act.id), loaded.made_by.get(act.id),
+                     r.new if r else None, r.on if r else None))
+    notes = [(u.act_id, u.id, n) for u in loaded.units for n in u.footnotes]
+    notes += [(a, None, n) for a, ns in loaded.unplaced_notes.items() for n in ns]
+    for act_id, unit_id, note in notes:
+        if a := parse_amendment(note):
+            con.execute("INSERT INTO amendments VALUES (?,?,?,?,?,?,?,?)",
+                        (act_id, unit_id, a.kind, a.instrument, a.date, a.effective, a.year,
+                         a.note))
+    for u in loaded.units:
         con.execute("INSERT INTO statute_units VALUES (?,?,?,?,?,?,?,?,?)",
                     (u.id, u.act_id, u.number, u.title, getattr(u, "part", ""), u.chapter,
                      u.text, json.dumps(u.footnotes, ensure_ascii=False), int(u.omitted)))
@@ -163,7 +194,8 @@ def content_hash(con) -> str:
     """Hash of every table's rows in a fixed order, so identical sources give
     an identical hash."""
     h = hashlib.sha256()
-    for table, order in (("acts", "id"), ("statute_units", "id"), ("judgments", "id"),
+    for table, order in (("acts", "id"), ("statute_units", "id"),
+                         ("amendments", "act_id, unit_id, note"), ("judgments", "id"),
                          ("citations", "key, judgment_id"), ("chunks", "id"),
                          ("edges", "src, rel, dst"), ("unresolved_refs", "judgment_id, raw")):
         for row in con.execute(f"SELECT * FROM {table} ORDER BY {order}"):
@@ -194,6 +226,12 @@ def quality_report(con) -> str:
         n, om = con.execute("SELECT COUNT(*), SUM(omitted) FROM statute_units WHERE act_id=?",
                             (act_id,)).fetchone()
         lines.append(f"| {title} | {n} | {om} | {edition} |")
+    dated = q("SELECT COUNT(*) FROM amendments WHERE date IS NOT NULL OR year IS NOT NULL")
+    unplaced = q("SELECT COUNT(*) FROM amendments WHERE unit_id IS NULL")
+    lines.append("")
+    lines.append(f"- Amendments recorded from footnotes: {q('SELECT COUNT(*) FROM amendments')} "
+                 f"({dated} with a date or year, "
+                 f"{unplaced} not tied to a unit)")
     lines += ["", "## Links", "", "| Relation | Count |", "|---|---|"]
     for rel, n in con.execute("SELECT rel, COUNT(*) FROM edges GROUP BY rel ORDER BY rel"):
         lines.append(f"| {rel} | {n} |")
@@ -222,9 +260,10 @@ def build(out: Path = DEFAULT_OUT, judgments_csv: Path = sources.CLEAN_JUDGMENTS
     tmp.unlink(missing_ok=True)
     con = sqlite3.connect(tmp)
     con.executescript(SCHEMA)
-    units, editions = _load_statutes()
+    statutes = _load_statutes()
+    units = statutes.units
     judgments = load_judgments(judgments_csv)
-    _insert_statutes(con, units, editions)
+    _insert_statutes(con, statutes)
     _insert_judgments(con, judgments)
     _insert_links(con, judgments)
     _insert_chunks(con, judgments, units)

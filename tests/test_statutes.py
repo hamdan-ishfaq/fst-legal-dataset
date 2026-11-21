@@ -9,6 +9,8 @@ from fstlegal.corpus.statutes import _heading_continues, _unit_start, parse_stat
     ("1[4A. Review.⎯ (1) A tribunal shall", 4, ("4A", "Review")),
     ("2. Definitions.__ (1) In this Act", 1, ("2", "Definitions")),
     ("26. 2[Omitted]", 25, ("26", "Omitted")),
+    ("2. Definitions.- In these rules", 1, ("2", "Definitions")),
+    ("10-A. Appearance of Counsel.-No party", 9, ("10A", "Appearance of Counsel")),
     ("(2) It shall come into force at once.", 1, None),
     ("5. Powers of Tribunals.—(1)", 9, None),  # out of sequence
 ])
@@ -33,6 +35,8 @@ def parsed():
 @pytest.mark.parametrize("act_id, expected", [
     ("STA-1973", ["1", "2", "3", "3A", "4", "4A", "5", "5A", "6", "7", "8"]),
     ("ED-2020", [str(n) for n in range(1, 22)]),
+    # rule 10's heading is missing from the only copy we have; its text joins rule 9
+    ("ED-1973", [str(n) for n in range(1, 10)] + ["10A"]),
 ])
 def test_all_units_found(parsed, act_id, expected):
     assert [u.number for u in parsed[act_id]] == expected
