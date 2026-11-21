@@ -265,7 +265,7 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 
 **Tasks**
 - 4.1 Pipeline: question → hybrid + graph retrieval → one prompt containing the top passages with their citation IDs → answer that cites those IDs.
-- 4.2 Output schema (JSON) for the brief's five sections, with each claim holding a list of citation IDs.
+- 4.2 Output schema (JSON) for the brief's six sections, with each claim holding a list of citation IDs.
 - 4.3 Basic citation check: every cited ID must be one of the passages given to the model.
 - 4.4 Command-line entry point and a minimal API endpoint (`POST /ask`).
 - 4.5 Run the Phase 2 gold set end to end and record answer-level metrics (Phase 10).
@@ -315,7 +315,7 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 
 ### Phase 6 — Brief generation and verification
 
-**Goal:** Turn the root model's output into the five-section brief and make sure every claim is backed by a source.
+**Goal:** Turn the root model's output into the six-section brief and make sure every claim is backed by a source.
 
 **Tasks**
 - 6.1 Brief template and prompts for each section, including the opposing-counsel section: arguments respondents made in similar judgments, and how the tribunal answered them.

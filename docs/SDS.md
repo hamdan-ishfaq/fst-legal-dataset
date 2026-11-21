@@ -85,7 +85,8 @@ python -m fstlegal.corpus.build
 
 | Table | Key | Contents |
 |---|---|---|
-| `acts` | `id` (e.g. `CSA-1973`) | Title, unit kind, whether text is ingested, edition |
+| `acts` | `id` (e.g. `CSA-1973`) | Title, unit kind, whether text is ingested, edition, notification that made it, the rules that replaced it and the date (D-008) |
+| `amendments` | — | Per unit (or per act when the footnote marker was lost): kind, instrument, date made, date effective, year, footnote text (D-008) |
 | `statute_units` | `id` (e.g. `CSA-1973:s-13`) | Act, number, title, Part, Chapter, text, footnotes (JSON), omitted flag |
 | `judgments` | `id` = `J-<site_id>` | Parties, year, date, appeal number, bench, outcome, summary, questions, keywords, operative order, truncated flag, source URL, full text |
 | `citations` | (`key`, `judgment_id`) | Every reported citation of a judgment and its normalized key |
@@ -146,6 +147,8 @@ Every query on a private table goes through a data-access function that takes th
 - `judgments.py`: groups rows by site ID, splits paragraphs by following the judgment's own numbering (a marker starts a paragraph only if it continues the sequence), detects truncation from missing closing phrases, and extracts the operative order from the closing sentences.
 - `constitution.py`: reads the PDF line by line. Margin titles (right on odd pages, left on even), the body column and footnotes are told apart by position. Footnote markers printed before an Article number are resolved by which reading continues the sequence.
 - `statutes.py`: parses Pakistan Code PDFs into sections, joins headings wrapped across lines, and for scanned Gazette text recovers lost rule numbers from headings.
+- `estacode.py`: cuts each set of rules out of ESTACODE 2021 by page range and its closing `[Authority: ...]` line, and ties each amendment footnote to its rule through the page's symbol markers (`*`, `**`, `@`).
+- `amendments.py`: reads kind, instrument, date and effective date from a footnote (D-008).
 - `laws.py`: act registry and reference resolver; the act decides the unit kind, so a judgment's "Rule 4" of an Act still maps to section 4.
 - `chunking.py`: judgment chunks follow paragraph boundaries (up to 350 words); statute chunks are one unit each, split at sub-sections if long, each starting with the unit header.
 - `build.py`: writes all tables, then the FTS index, then a content hash over all rows in a fixed order (FR-8), then the quality report.
@@ -156,8 +159,10 @@ Every query on a private table goes through a data-access function that takes th
 - **Graph** (`graph.py`): related judgments score shared provisions and precedents, weighted by `1 / number of judgments` sharing them, so near-universal provisions count little.
 - **Fusion** (`hybrid.py`): reciprocal rank fusion (k = 60). In graph modes, judgments linked to the top text hits are fused into case search, and the provisions applied by the top cases are fused into statute search. Modes: `bm25`, `dense`, `hybrid`, `bm25+graph`, `hybrid+graph`.
 
+- **Versions** (`versions.py`, D-008): for a judgment, the changes to each provision it applied that came after its decision date (amendments) or at any time (repeal of the rules), each with the later judgments that applied the new wording.
+
 ### 3.3 Baseline pipeline (`fstlegal/pipeline/baseline.py`)
-Retrieves 6 statute units and 4 judgments, labels them `[S1]…`, `[C1]…`, and calls the model once with a JSON schema that forces the five-section brief with a `sources` list on every claim (`llama-server` constrains generation to the schema). Claims citing no retrieved source are removed. Case papers are passed inside a block marked as data.
+Retrieves 6 statute units and 4 judgments, labels them `[S1]…`, `[C1]…`, adds a `LAW SINCE` note to each judgment whose law has changed, and calls the model once with a JSON schema that forces the six-section brief with a `sources` list on every claim (`llama-server` constrains generation to the schema). Claims citing no retrieved source are removed. Case papers are passed inside a block marked as data.
 
 ### 3.4 Router (Phase 5, D-006)
 - Look-up: the question names a specific unit (`Article 10A`, `section 4`) or citation → single route.
@@ -238,7 +243,8 @@ Versions are pinned in `config/runtime.toml` (llama.cpp build tag, model reposit
 | `corpus/laws.py`, `corpus/citations.py` | FR-6 |
 | `corpus/build.py` | FR-7, FR-8, FR-9 |
 | `retrieval/` | FR-10, NFR-3 |
-| `pipeline/baseline.py` | FR-11, FR-12, NFR-1 |
+| `pipeline/baseline.py` | FR-11, FR-12, FR-35, NFR-1 |
+| `corpus/estacode.py`, `corpus/amendments.py`, `retrieval/versions.py` | FR-34, FR-35 |
 | Router, RLM orchestrator | FR-15 to FR-18, NFR-9, NFR-10 |
 | Verifier | FR-12, FR-13, FR-14, NFR-2 |
 | Cluster | FR-19 to FR-24, NFR-4, NFR-7, NFR-11, NFR-13 |

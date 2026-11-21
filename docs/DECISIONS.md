@@ -136,3 +136,20 @@ Decisions that are expensive to change later. New entries go at the bottom. Past
 **Why not the others:** A custom scaffold throws away the fine-tuning.
 **Consequences:** Prompt additions must be tested against the unmodified prompt (ablation). The upstream repo recommends vLLM; we run it against llama.cpp's OpenAI-compatible server, which must be verified in Phase 3.
 **Revisit if:** The upstream scaffold cannot run against llama.cpp, or the legal-tool additions measurably hurt the fine-tuned model.
+
+## D-008: Law versions from amendment footnotes
+**Date:** 2026-11-21 · **Status:** Accepted
+
+**Context:** A judgment applies the law as it stood when it was decided. Lawyers need to know when a cited case was decided under wording that has since changed, and whether any later case applied the new wording. Official texts (ESTACODE 2021, Pakistan Code) print only the current wording, with a footnote for each change giving the instrument and usually the date.
+
+| Option | Good | Bad | Effort |
+|---|---|---|---|
+| Full text of every past version | Exact old wording can be quoted | Needs every past Gazette notification, which we cannot source | High |
+| Change events from footnotes, current text only | Uses the sources we have; dates and instruments are official | Old wording is not shown, only that it changed and when | Medium |
+| Do nothing | No work | Briefs can rely on cases decided under repealed wording without saying so | None |
+
+**Decision:** Record each footnote as a change event (kind, instrument, date made, date effective) on its unit, plus the rule sets replaced by others with the date (E&D 1973 to E&D 2020, 11 Dec 2020). For each judgment in a brief, compare its decision date with these events and list later changes and the later judgments that applied the new wording. The model may add a view on whether the change matters; the brief labels it as opinion.
+**Why:** It gives the lawyer the dates and the precedent position from official sources without pretending to reconstruct text we do not have.
+**Why not the others:** Full versions cannot be sourced. Doing nothing leaves a correctness gap the tool exists to close.
+**Consequences:** Judgments need a decision date (21 of the current 28 lack one; the full scrape must capture it). A change dated only by year counts as possibly after a decision in that year. Proceedings begun under old rules continue under them (E&D 2020, rule 21(2)), so a repeal before the decision is reported as such, not as an error.
+**Revisit if:** Past Gazette notifications become available, so old wording can be stored as versions.

@@ -56,7 +56,7 @@ Status: **Pass** (automated and passing), **Planned** (designed, phase not built
 | TC-18 | FR-10 | Rank fusion rewards agreement between rankings | `test_retrieval.py::test_rrf_rewards_agreement` | Pass |
 | TC-19 | FR-10 | "Right to fair trial" retrieves Article 10A | `test_retrieval.py::test_statute_search_finds_fair_trial_article` | Pass |
 | TC-20 | FR-10 | A hidden judgment is never returned (no leakage in evaluation) | `test_retrieval.py::test_hidden_judgment_is_never_returned` | Pass |
-| TC-21 | FR-11 | The brief has all five sections and every kept claim has sources | `test_baseline.py::test_end_to_end_with_fake_model` | Pass |
+| TC-21 | FR-11 | The brief has all six sections and every kept claim has sources | `test_baseline.py::test_end_to_end_with_fake_model` | Pass |
 | TC-22 | FR-12, NFR-1 | Claims citing sources that were not retrieved are removed | `test_baseline.py::test_claims_without_valid_sources_are_dropped` | Pass |
 | TC-23 | NFR-10 | Case papers reach the model only inside a block marked as data | `test_baseline.py::test_case_papers_are_marked_as_data` | Pass |
 | TC-24 | FR-11 | Baseline answers a real question on the live model with only valid citations | `pytest -m model` | Planned (runtime downloading) |
@@ -66,6 +66,10 @@ Status: **Pass** (automated and passing), **Planned** (designed, phase not built
 | TC-28 | FR-16, NFR-9 | REPL code that opens a file, a socket or loops forever is stopped | Sandbox tests | Planned (Phase 5) |
 | TC-29 | FR-17 | Every run has a trace with route, turns, code, tool calls and sub-calls | RLM tests | Planned (Phase 5) |
 | TC-30 | FR-18 | A run over budget ends with an incomplete brief | RLM tests | Planned (Phase 5) |
+| TC-44 | FR-34 | Amendment footnotes give the right kind, instrument and dates; explanatory notes are not amendments | `test_versions.py::test_parse_amendment`, `::test_explanatory_note_is_not_an_amendment` | Pass |
+| TC-45 | FR-34, FR-5 | Every rule of the APT, Seniority, Appeal and Tribunal Procedure Rules is found in ESTACODE, and amendments attach to their rule | `test_versions.py::test_estacode_rules_found`, `::test_estacode_amendments_attach_to_their_rule` | Pass |
+| TC-46 | FR-35 | A 2022 judgment under the repealed E&D Rules 1973 is reported with the 2020 replacement; amendments after an early decision are listed in date order, none after a late one | `test_versions.py::test_repealed_rules_are_reported`, `::test_amendments_after_an_early_decision` | Pass |
+| TC-47 | FR-35 | Law-change notes appear in the brief and the model's view is labelled as opinion | `test_baseline.py::test_law_changes_are_shown_and_opinion_is_labelled` | Pass |
 
 ### 2.3 Distribution (FR-19 to FR-24)
 
@@ -116,7 +120,7 @@ Every result is saved with the corpus hash, model hash and command that produced
 
 ### 3.3 Results so far
 
-Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports/retrieval_baseline.md)): recall@10 BM25 0.226, dense 0.231, hybrid 0.263, hybrid + graph 0.453, BM25 + graph 0.666, popularity control 0.726. The graph more than doubles keyword recall, but at this corpus size the popularity control is still ahead, so NFR-3 is not yet met. The test is re-run at full corpus size.
+Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports/retrieval_baseline.md)): recall@10 BM25 0.216, dense 0.191, hybrid 0.245, hybrid + graph 0.376, BM25 + graph 0.533, popularity control 0.504. With the ESTACODE rules added, keyword + graph retrieval now passes the control on recall@10 (also without the near-universal STA s.4: 0.290 vs 0.252), though the control still ranks its hits higher (MRR). The test is re-run at full corpus size.
 
 ---
 
@@ -160,6 +164,8 @@ Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports
 | FR-28 | TC-24 (rendered brief) |
 | FR-29 | TC-37 (audit entries) |
 | FR-30, FR-31 | TC-41 |
+| FR-34 | TC-44, TC-45 |
+| FR-35 | TC-46, TC-47 |
 | FR-32, FR-33 | TC-42 |
 | NFR-1 | TC-22, H1 |
 | NFR-2 | H1 |

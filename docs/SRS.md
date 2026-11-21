@@ -93,7 +93,7 @@ Priority: **M** must (needed for the system to meet its purpose), **S** should, 
 | ID | Requirement | Priority | Phase |
 |---|---|---|---|
 | FR-10 | Retrieve statute units and judgment passages for a question by keyword, embedding and graph search, alone or combined. | M | 2 |
-| FR-11 | Produce a brief with five sections, where every claim lists the sources it rests on. | M | 4 |
+| FR-11 | Produce a brief with six sections, where every claim lists the sources it rests on. | M | 4 |
 | FR-12 | Remove any claim whose cited sources were not retrieved, or do not exist in the corpus. | M | 4, 6 |
 | FR-13 | Check that each cited passage supports its claim; remove unsupported claims and mark partly supported ones. | M | 6 |
 | FR-14 | Say so when nothing relevant is found, instead of answering from general knowledge. | M | 6 |
@@ -101,6 +101,8 @@ Priority: **M** must (needed for the system to meet its purpose), **S** should, 
 | FR-16 | Run the RLM root model with the question and case papers held as REPL variables, with retrieval tools and sub-calls available (D-007). | M | 5 |
 | FR-17 | Store the full trace of each run: route, root turns, executed code, tool calls, sub-call prompts and answers. | M | 5 |
 | FR-18 | Stop a run that exceeds its step, sub-call, token or time budget, and mark the partial brief as incomplete. | S | 5 |
+| FR-34 | Record the amendment history of every statute unit (what changed, by which instrument, on which date) and which sets of rules replaced others, from the official texts. | M | 1 |
+| FR-35 | For each judgment cited in a brief, state which version of each provision it applied (by decision date), every later change with its date, and the later judgments that applied the new wording, or that none has; the model's view of whether the change would alter the result is shown labelled as opinion, not authority. | M | 4 |
 
 ### 3.3 Distributed execution
 
@@ -181,6 +183,7 @@ Latency is not a requirement beyond completing within the run budget: correctnes
 | FR-1 to FR-9 | Implemented and tested (corpus build) |
 | FR-10 | Implemented: keyword, graph and fusion tested; embedding search implemented, awaiting the model server for measurement |
 | FR-11, FR-12 | Implemented in the baseline pipeline; tested with a stub model |
+| FR-34, FR-35 | Implemented and tested: amendment history from ESTACODE and Pakistan Code footnotes; law-change notes and labelled opinion in the brief |
 | FR-13 to FR-33 | Designed (SDS); scheduled in Implementation Plan Phases 5 to 9 |
 | NFR-1, NFR-12, NFR-15 | In place (citation existence check, documented commands, CI) |
 | NFR-3 | Measured at 28 judgments (see `reports/retrieval_baseline.md`); to be re-measured at full size |
