@@ -1,6 +1,6 @@
 """Start llama-server for the chat model and/or the embedding model.
 
-Usage: python scripts/serve.py chat|embedding
+Usage: python scripts/serve.py chat|embedding [model key from config, e.g. rlm_community]
 Settings come from [serve.*] in config/runtime.toml.
 """
 
@@ -22,16 +22,16 @@ def model_path(key: str) -> Path:
     return folder / gguf[0]
 
 
-def command(role: str) -> list[str]:
+def command(role: str, model: str | None = None) -> list[str]:
     s = CONFIG["serve"][role]
     exe = ROOT / "runtime" / "llama.cpp" / CONFIG["llama_cpp"]["tag"] / "llama-server.exe"
-    return [str(exe), "-m", str(model_path(s["model"])), "--port", str(s["port"]),
+    return [str(exe), "-m", str(model_path(model or s["model"])), "--port", str(s["port"]),
             "-c", str(s["ctx_size"]), "-ngl", str(s["gpu_layers"]), "-np", str(s["parallel"]),
             *s["extra"]]
 
 
 if __name__ == "__main__":
     role = sys.argv[1] if len(sys.argv) > 1 else "chat"
-    cmd = command(role)
+    cmd = command(role, sys.argv[2] if len(sys.argv) > 2 else None)  # optional [models] key
     print(" ".join(cmd), flush=True)
     sys.exit(subprocess.call(cmd))

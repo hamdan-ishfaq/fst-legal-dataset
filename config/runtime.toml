@@ -31,6 +31,12 @@ repo = "Qwen/Qwen3-8B-GGUF"
 revision = "7c41481f57cb95916b40956ab2f0b139b296d974"
 files = ["Qwen3-8B-Q4_K_M.gguf"]
 
+[models.rlm_community]
+# Community Q4_K_M of the RLM fine-tune, for early tests until scripts/quantize_rlm.py exists
+repo = "mitkox/rlm-qwen3-8b-v0.1-Q4_K_M-GGUF"
+revision = "4220f0c145a93a897f6b12ea019ae005898dbda9"
+files = ["rlm-qwen3-8b-v0.1-q4_k_m.gguf"]
+
 # llama-server settings for the reference laptop (RTX 4050, 6 GB VRAM).
 [serve.chat]
 model = "qwen3_8b"            # key under [models]; switch to the quantized RLM model when built
