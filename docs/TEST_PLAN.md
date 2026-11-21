@@ -59,7 +59,7 @@ Status: **Pass** (automated and passing), **Planned** (designed, phase not built
 | TC-21 | FR-11 | The brief has all six sections and every kept claim has sources | `test_baseline.py::test_end_to_end_with_fake_model` | Pass |
 | TC-22 | FR-12, NFR-1 | Claims citing sources that were not retrieved are removed | `test_baseline.py::test_claims_without_valid_sources_are_dropped` | Pass |
 | TC-23 | NFR-10 | Case papers reach the model only inside a block marked as data | `test_baseline.py::test_case_papers_are_marked_as_data` | Pass |
-| TC-24 | FR-11 | Baseline answers a real question on the live model with only valid citations | `pytest -m model` | Planned (runtime downloading) |
+| TC-24 | FR-11 | Baseline answers a real question on the live model with only valid citations | `pytest -m model` | Pass (see `reports/baseline_verification.md`) |
 | TC-25 | FR-13 | A claim paired with an unrelated passage is judged not supported | Verifier tests | Planned (Phase 6) |
 | TC-26 | FR-14 | A question about a provision that does not exist gets an abstention | Gold set E4 | Planned (Phase 6) |
 | TC-27 | FR-15 | "What does Article 10A say?" takes the single route; a long case file takes the RLM route | Router tests | Planned (Phase 5) |

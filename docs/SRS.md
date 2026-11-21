@@ -182,7 +182,7 @@ Latency is not a requirement beyond completing within the run budget: correctnes
 |---|---|
 | FR-1 to FR-9 | Implemented and tested (corpus build) |
 | FR-10 | Implemented: keyword, graph and fusion tested; embedding search implemented, awaiting the model server for measurement |
-| FR-11, FR-12 | Implemented in the baseline pipeline; tested with a stub model |
+| FR-11, FR-12 | Implemented in the baseline pipeline; tested with a stub model and verified live on Qwen3-8B over 28 judgments (`reports/baseline_verification.md`) |
 | FR-34, FR-35 | Implemented and tested: amendment history from ESTACODE and Pakistan Code footnotes; law-change notes and labelled opinion in the brief |
 | FR-13 to FR-33 | Designed (SDS); scheduled in Implementation Plan Phases 5 to 9 |
 | NFR-1, NFR-12, NFR-15 | In place (citation existence check, documented commands, CI) |
