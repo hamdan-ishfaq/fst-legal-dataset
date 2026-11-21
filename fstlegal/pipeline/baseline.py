@@ -17,7 +17,8 @@ from ..llm.client import ChatClient
 from ..retrieval.hybrid import Ranked, Retriever
 from ..retrieval.store import Corpus
 
-SECTIONS = ("relevant_law", "similar_cases", "opposing_arguments", "our_arguments", "checklist")
+SECTIONS = ("relevant_law", "similar_cases", "law_changes", "opposing_arguments",
+            "our_arguments", "checklist")
 
 _CLAIM = {"type": "object", "properties": {
     "text": {"type": "string"},
@@ -35,6 +36,9 @@ leave it out. Do not invent case names, citations or provisions.
 Write these sections:
 - relevant_law: the provisions that govern the question and what they say
 - similar_cases: what comparable judgments decided and why
+- law_changes: only where a case source has a "LAW SINCE" note: your cautious opinion on \
+whether the change would alter that case's result today. Say plainly it is an opinion. \
+Leave empty when there are no such notes
 - opposing_arguments: what the department's counsel is likely to argue
 - our_arguments: the points in the appellant's favour
 - checklist: what to prepare or file before the next hearing"""
@@ -46,6 +50,7 @@ class Source:
     ref_id: str  # statute-unit ID or judgment ID
     citation: str  # what a lawyer would cite
     text: str
+    law_since: list[str] = field(default_factory=list)  # changes to the law it applied
 
 
 @dataclass
@@ -120,11 +125,21 @@ def answer(question: str, corpus: Corpus, retriever: Retriever, llm: ChatClient,
 
 def render(brief: Brief) -> str:
     titles = {"relevant_law": "Relevant law", "similar_cases": "Similar cases",
+              "law_changes": "Law changed since (opinion)",
               "opposing_arguments": "Likely opposing arguments",
               "our_arguments": "Arguments in our favour", "checklist": "Preparation checklist"}
     lines = [f"# {brief.question}", ""]
     for name in SECTIONS:
         lines += [f"## {titles[name]}", ""]
+        if name == "law_changes":
+            notes = [(s.citation, n) for s in brief.sources.values() for n in s.law_since]
+            if not notes:
+                lines += ["- No later change to the law applied in the cited cases.", ""]
+                continue
+            lines += [f"- {cite}: {n}" for cite, n in notes]
+            lines += [f"- Opinion, not authority: {c['text']}" for c in brief.sections[name]]
+            lines.append("")
+            continue
         for c in brief.sections[name] or [{"text": "Nothing supported by the sources.",
                                            "sources": []}]:
             refs = "; ".join(brief.sources[s].citation for s in c["sources"])

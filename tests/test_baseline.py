@@ -8,6 +8,7 @@ from fstlegal.pipeline.baseline import (
     answer,
     build_messages,
     check_citations,
+    render,
 )
 
 SOURCES = [Source("S1", "CONST-1973:art-10A", "Article 10A, Constitution", "Right to fair trial"),
@@ -25,6 +26,20 @@ def test_claims_without_valid_sources_are_dropped():
     assert [c["text"] for c in brief.sections["relevant_law"]] == ["Fair trial applies."]
     assert len(brief.dropped_claims) == 2
     assert brief.invalid_citations == ["C9"]
+
+
+def test_law_changes_are_shown_and_opinion_is_labelled():
+    since = Source("C2", "J-2", "2022 PLC(CS) 2", "Old rules case",
+                   ["Decided 2022-07-05 under r-5 of the E&D Rules 1973. Those rules had "
+                    "already been replaced on 2020-12-11."])
+    raw = {s: [] for s in SECTIONS}
+    raw["law_changes"] = [{"text": "The 2020 rules may not change the result.",
+                           "sources": ["C2"]}]
+    brief = check_citations(raw, SOURCES + [since])
+    brief.question = "q"
+    text = render(brief)
+    assert "2022 PLC(CS) 2: Decided 2022-07-05" in text
+    assert "Opinion, not authority: The 2020 rules may not change the result." in text
 
 
 def test_case_papers_are_marked_as_data():
