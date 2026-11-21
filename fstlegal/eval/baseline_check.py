@@ -8,6 +8,11 @@ appear among the cited statute sources, tokens and time.
 Run (with ``python scripts/serve.py chat`` running):
 ``python -m fstlegal.eval.baseline_check --out docs/reports/baseline_verification.json``
 ``python -m fstlegal.eval.baseline_check --pipeline rlm --out docs/reports/rlm_verification.json``
+
+With ``--long``, each question comes with a long case file: the hidden judgment's
+own text up to its order (facts, arguments, reasoning; the result cut off), for
+judgments where that runs to at least ``LONG_CHARS`` characters. This is more
+than the baseline's single call can hold, which is the case the RLM is for (H1).
 """
 
 from __future__ import annotations
@@ -25,26 +30,42 @@ from ..retrieval.hybrid import Retriever
 from ..retrieval.store import Corpus
 from ..rlm.engine import local_rlm
 
+LONG_CHARS = 15_000
 
-def run(limit: int | None, server: str, pipeline: str = "baseline") -> dict:
+
+def case_file(judgment: dict) -> str:
+    """The judgment's text before its order, or "" if the order cannot be located."""
+    order = judgment["operative_order"]
+    if not order or judgment["text_truncated"]:
+        return ""
+    start = judgment["full_text"].find(order[:60])
+    return judgment["full_text"][:start] if start > 0 else ""
+
+
+def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool = False) -> dict:
     corpus = Corpus()
     graph = CorpusGraph(corpus)
     retriever = Retriever(corpus, graph)
     llm = ChatClient(server)
     rlm, pool = local_rlm(server) if pipeline == "rlm" else (None, [])
     rows = []
-    for jid in corpus.judgment_ids()[:limit]:
+    ids = corpus.judgment_ids()
+    if long:
+        ids = [j for j in ids if len(case_file(corpus.judgment(j))) >= LONG_CHARS]
+    for jid in ids[:limit]:
         question = corpus.judgment(jid)["questions"][0]
+        papers = case_file(corpus.judgment(jid)) if long else ""
         gold = {u for u in graph.provisions_applied(jid) if u in graph.units_with_text}
         start = time.perf_counter()
         extra = {}
         if rlm:
-            result = rlm.run(question, exclude={jid})
+            result = rlm.run(question, {"case_file": papers} if papers else None,
+                             exclude={jid})
             brief = result.brief
             extra = {"status": result.status, "reason": result.reason, "turns": result.turns,
                      "subcalls": result.subcalls, "tokens": result.tokens}
         else:
-            brief = answer(question, corpus, retriever, llm, exclude={jid})
+            brief = answer(question, corpus, retriever, llm, papers, exclude={jid})
             call = llm.log[-1]
             extra = {"tokens": call["prompt_tokens"] + call["completion_tokens"]}
         seconds = time.perf_counter() - start
@@ -87,8 +108,8 @@ def run(limit: int | None, server: str, pipeline: str = "baseline") -> dict:
         summary |= {"completed": sum(r["status"] == "complete" for r in rows),
                     "mean_turns": mean(r["turns"] for r in rows),
                     "mean_subcalls": mean(r["subcalls"] for r in rows)}
-    return {"pipeline": pipeline, "corpus_hash": corpus.content_hash, "summary": summary,
-            "runs": rows}
+    return {"pipeline": pipeline, "long_case_files": long, "corpus_hash": corpus.content_hash,
+            "summary": summary, "runs": rows}
 
 
 def main() -> None:
@@ -96,9 +117,10 @@ def main() -> None:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--server", default="http://127.0.0.1:8080")
     parser.add_argument("--pipeline", choices=("baseline", "rlm"), default="baseline")
+    parser.add_argument("--long", action="store_true", help="add a long case file to each question")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
-    result = run(args.limit, args.server, args.pipeline)
+    result = run(args.limit, args.server, args.pipeline, args.long)
     print(json.dumps(result["summary"], indent=2))
     if args.out:
         args.out.write_text(json.dumps(result, indent=2), encoding="utf-8")
