@@ -1,10 +1,11 @@
 # Retrieval baseline (28 judgments)
 
-**Date:** 2026-11-21 · **Embedding:** Qwen3-Embedding-0.6B Q8_0 · **Corpus:** 28 enriched judgments, Constitution (27th Amendment), Service Tribunals Act 1973, Civil Servants Act 1973, E&D Rules 2020.
+**Date:** 2026-11-21 · **Embedding:** Qwen3-Embedding-0.6B Q8_0 · **Corpus hash:** `e46d9481ea95`
+**Corpus:** 28 enriched judgments; Constitution (27th Amendment); Service Tribunals Act 1973; Civil Servants Act 1973; E&D Rules 1973 and 2020; from ESTACODE 2021 the APT Rules 1973, Seniority Rules 1993, Appeal Rules 1977 and Service Tribunals (Procedure) Rules 1974.
 
 ## Method
 
-Leave-one-out (gold set E1): each legal question recorded for a judgment is used as a query, with that judgment hidden from retrieval. A retrieved statute unit is relevant if the hidden judgment applied it. Only units whose text is in the corpus count as gold, so judgments citing only rules we have not sourced yet are left out.
+Leave-one-out (gold set E1): each legal question recorded for a judgment is used as a query, with that judgment hidden from retrieval. A retrieved statute unit is relevant if the hidden judgment applied it. Only units whose text is in the corpus count as gold, so judgments citing only unsourced law are left out.
 
 A **popularity control** ignores the query and ranks units by how many other judgments apply them. A method that uses the question has to beat it.
 
@@ -20,39 +21,38 @@ python -m fstlegal.eval.retrieval_eval --modes $MODES --embed-url http://127.0.0
 
 ## Results
 
-All gold units (73 queries, 22 judgments):
+All gold units (76 queries, 23 judgments):
 
 | Mode | R@1 | R@3 | R@5 | R@10 | nDCG@10 | MRR |
 |---|---|---|---|---|---|---|
-| Popularity (control) | 0.461 | 0.559 | 0.616 | 0.726 | 0.670 | 0.768 |
-| BM25 | 0.083 | 0.125 | 0.169 | 0.226 | 0.159 | 0.182 |
-| Dense | 0.105 | 0.178 | 0.199 | 0.231 | 0.185 | 0.206 |
-| Hybrid (BM25 + dense) | 0.124 | 0.185 | 0.202 | 0.263 | 0.202 | 0.230 |
-| Hybrid + graph | 0.203 | 0.320 | 0.357 | 0.453 | 0.352 | 0.409 |
-| BM25 + graph | 0.254 | 0.394 | 0.517 | 0.666 | 0.492 | 0.512 |
+| Popularity (control) | 0.342 | 0.421 | 0.425 | 0.504 | 0.524 | 0.735 |
+| BM25 | 0.067 | 0.113 | 0.142 | 0.216 | 0.153 | 0.195 |
+| Dense | 0.083 | 0.153 | 0.166 | 0.191 | 0.163 | 0.200 |
+| Hybrid (BM25 + dense) | 0.080 | 0.129 | 0.176 | 0.245 | 0.179 | 0.219 |
+| Hybrid + graph | 0.136 | 0.219 | 0.328 | 0.376 | 0.290 | 0.334 |
+| BM25 + graph | 0.161 | 0.268 | 0.353 | **0.533** | 0.383 | 0.429 |
 
-Without units applied by more than 30% of judgments (drops STA s.4, the right-of-appeal section; 45 queries, 13 judgments):
+Without units applied by more than 30% of judgments (drops STA s.4, the right-of-appeal section; 61 queries, 18 judgments):
 
 | Mode | R@1 | R@3 | R@5 | R@10 | nDCG@10 | MRR |
 |---|---|---|---|---|---|---|
-| Popularity (control) | 0.000 | 0.196 | 0.307 | 0.496 | 0.300 | 0.285 |
-| BM25 | 0.078 | 0.091 | 0.119 | 0.163 | 0.130 | 0.173 |
-| Dense | 0.057 | 0.143 | 0.172 | 0.220 | 0.159 | 0.176 |
-| Hybrid (BM25 + dense) | 0.093 | 0.144 | 0.174 | 0.219 | 0.165 | 0.197 |
-| Hybrid + graph | 0.037 | 0.113 | 0.174 | 0.272 | 0.165 | 0.180 |
-| BM25 + graph | 0.033 | 0.089 | 0.194 | 0.381 | 0.213 | 0.210 |
+| Popularity (control) | 0.000 | 0.123 | 0.127 | 0.252 | 0.171 | 0.220 |
+| BM25 | 0.057 | 0.122 | 0.151 | 0.180 | 0.139 | 0.176 |
+| Dense | 0.056 | 0.148 | 0.167 | 0.181 | 0.146 | 0.167 |
+| Hybrid (BM25 + dense) | 0.072 | 0.116 | 0.161 | 0.248 | 0.171 | 0.195 |
+| Hybrid + graph | 0.088 | 0.156 | 0.269 | 0.278 | 0.218 | 0.226 |
+| BM25 + graph | 0.080 | 0.137 | 0.203 | **0.290** | 0.210 | 0.231 |
 
 Raw numbers: `retrieval_all.json`, `retrieval_specific.json`.
 
 ## Reading
 
-- Adding the graph to BM25 more than doubles recall@10 (0.226 → 0.666; 0.163 → 0.381 without s.4).
-- BM25 alone is weak because questions and statute text use different words ("dismissed without a show-cause notice" vs the wording of the E&D Rules). Dense retrieval narrows it a little (recall@10 0.231 vs 0.226; 0.220 vs 0.163 without s.4), and fusing both is best among the text-only modes.
-- Graph expansion helps every text mode, but hybrid + graph scores below BM25 + graph. Dense hits are spread over more judgments, so the provisions the graph collects from them are less concentrated on the commonly applied ones. At 28 judgments this mostly reflects the popularity effect below, not a real ranking difference.
-- **The popularity control still wins at this size.** With 28 judgments, a few provisions (STA s.4, Constitution Art. 25) are applied in most cases, so always suggesting them scores well. This test cannot yet separate "uses the question" from "suggests what is common". It has to be re-run at full scale (about 2,000 judgments), where the distribution of provisions is wider, before any claim about graph retrieval is made.
-- Only 48 of 112 law references point at text in the corpus, because the 1973 E&D Rules, Appeal Rules, APT Rules and Seniority Rules are not sourced yet. Adding them grows the gold set.
+- **BM25 + graph now passes the popularity control on recall@10** (0.533 vs 0.504; 0.290 vs 0.252 without s.4). In the previous run, with only 48 of 112 law references pointing at text, the control was ahead (0.726 vs 0.666). Adding the ESTACODE rules widened the set of provisions the judgments apply (67 of 112 now have text), so suggesting the common ones no longer suffices. The control still ranks its few hits higher (MRR 0.735), so the graph's gain is in coverage, not in first place.
+- The graph more than doubles keyword recall in both settings (0.216 → 0.533; 0.180 → 0.290).
+- Dense retrieval alone is no better than BM25 here; fusing the two is best among text-only modes. Hybrid + graph is below BM25 + graph: dense hits are spread over more judgments, so the provisions the graph collects from them are less focused.
+- 23 judgments is far too few for firm conclusions. The test is re-run at full size (about 2,000 judgments) before any claim in the thesis.
 
 ## Next
 
 1. Popularity as a prior inside the fusion, compared against this control.
-2. Re-run at full corpus size, where the graph modes can be compared fairly.
+2. Re-run at full corpus size.
