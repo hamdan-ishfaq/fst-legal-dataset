@@ -153,3 +153,20 @@ Decisions that are expensive to change later. New entries go at the bottom. Past
 **Why not the others:** Full versions cannot be sourced. Doing nothing leaves a correctness gap the tool exists to close.
 **Consequences:** Judgments need a decision date (21 of the current 28 lack one; the full scrape must capture it). A change dated only by year counts as possibly after a decision in that year. Proceedings begun under old rules continue under them (E&D 2020, rule 21(2)), so a repeal before the decision is reported as such, not as an error.
 **Revisit if:** Past Gazette notifications become available, so old wording can be stored as versions.
+
+## D-009: What the RLM holds in `context`, and the root model's settings
+**Date:** 2026-11-21 · **Status:** Accepted
+
+**Context:** First live runs with base Qwen3-8B as the root (the RLM fine-tune is not converted yet). With only the question and case papers in `context` (often empty), the model spent its turns inspecting an empty dict. With thinking off, it paged through the list without a plan and never answered. It also wrote bare expressions, whose values upstream discards.
+
+| Option | Good | Bad | Effort |
+|---|---|---|---|
+| Keep `context` to the question and case papers; model must search | Closest to the design text | Model wastes its turns when there are no papers | None |
+| Preload `context` with retrieved provisions and full judgments, ids at the head of each | Gives the RLM long material to split across sub-calls, which is what it is for; same retrieval as the baseline, but full texts | More tokens per run | Low |
+| Switch to the RLM fine-tune now | Trained for this scaffold | 16 GB download and conversion; not yet possible on this laptop's RAM without care | High |
+
+**Decision:** Preload `context` (case papers, 8 provisions, 6 full judgments up to 30k characters each, with law-change notes). Let the root model think before each turn (2,500 tokens per turn); sub-calls do not think. Show the value of a bare last expression. Tell the model to read judgments with `llm_query_batched`.
+**Why:** In the live test the run went from no answer in 12 turns to a cited six-section brief in 5 to 6 turns, with sub-calls.
+**Why not the others:** An empty `context` makes the RLM a worse baseline. The fine-tune is still the target, and each of these changes is kept small so the fine-tune can be run with and without them.
+**Consequences:** About 4 times the baseline's time per brief on one laptop; the sub-calls are what more laptops share (H2). These are deviations from the upstream scaffold and are listed in `fstlegal/rlm/prompts.py`.
+**Revisit if:** The RLM fine-tune is running; then compare it with and without these changes.

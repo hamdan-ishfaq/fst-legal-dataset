@@ -63,9 +63,10 @@ Status: **Pass** (automated and passing), **Planned** (designed, phase not built
 | TC-25 | FR-13 | A claim paired with an unrelated passage is judged not supported | Verifier tests | Planned (Phase 6) |
 | TC-26 | FR-14 | A question about a provision that does not exist gets an abstention | Gold set E4 | Planned (Phase 6) |
 | TC-27 | FR-15 | "What does Article 10A say?" takes the single route; a long case file takes the RLM route | Router tests | Planned (Phase 5) |
-| TC-28 | FR-16, NFR-9 | REPL code that opens a file, a socket or loops forever is stopped | Sandbox tests | Planned (Phase 5) |
-| TC-29 | FR-17 | Every run has a trace with route, turns, code, tool calls and sub-calls | RLM tests | Planned (Phase 5) |
-| TC-30 | FR-18 | A run over budget ends with an incomplete brief | RLM tests | Planned (Phase 5) |
+| TC-28 | FR-16, NFR-9 | REPL code that opens a file, a socket or loops forever is stopped | `test_rlm.py::test_files_and_unlisted_modules_are_blocked`, `::test_runaway_code_is_stopped` | Pass |
+| TC-29 | FR-17 | Every run has a trace with route, turns, code, tool calls and sub-calls | `test_rlm.py::test_rlm_retrieves_delegates_and_answers` | Pass for turns, code, output and sub-calls (with the worker that ran each); route waits for the router (FR-15) |
+| TC-30 | FR-18 | A run over budget ends with an incomplete brief | `test_rlm.py::test_turn_budget_ends_the_run`, `::test_subcall_budget_ends_the_run` | Pass |
+| TC-48 | FR-16, FR-12 | The RLM retrieves, delegates reading to sub-calls through the queue and answers; claims citing sources it never retrieved are removed; a hidden judgment cannot be read | `test_rlm.py::test_rlm_retrieves_delegates_and_answers`, `::test_hidden_judgment_cannot_be_read` | Pass |
 | TC-44 | FR-34 | Amendment footnotes give the right kind, instrument and dates; explanatory notes are not amendments | `test_versions.py::test_parse_amendment`, `::test_explanatory_note_is_not_an_amendment` | Pass |
 | TC-45 | FR-34, FR-5 | Every rule of the APT, Seniority, Appeal and Tribunal Procedure Rules is found in ESTACODE, and amendments attach to their rule | `test_versions.py::test_estacode_rules_found`, `::test_estacode_amendments_attach_to_their_rule` | Pass |
 | TC-46 | FR-35 | A 2022 judgment under the repealed E&D Rules 1973 is reported with the 2020 replacement; amendments after an early decision are listed in date order, none after a late one | `test_versions.py::test_repealed_rules_are_reported`, `::test_amendments_after_an_early_decision` | Pass |
@@ -75,11 +76,11 @@ Status: **Pass** (automated and passing), **Planned** (designed, phase not built
 
 | ID | Requirement | Test | Status |
 |---|---|---|---|
-| TC-31 | FR-19 | Two workers never claim the same job (concurrent claim test) | Planned (Phase 7) |
-| TC-32 | FR-20, NFR-11 | A job whose worker stops heartbeating returns to the queue and the run completes | Planned (Phase 7) |
+| TC-31 | FR-19 | Two workers never claim the same job (concurrent claim test) | Pass: `test_queue.py::test_batch_is_shared_across_workers` (local workers; remote workers in Phase 7) |
+| TC-32 | FR-20, NFR-11 | A job whose worker stops heartbeating returns to the queue and the run completes | Pass at queue level: `test_queue.py::test_expired_lease_is_requeued_and_late_result_refused`, `::test_heartbeat_keeps_the_lease`, `::test_job_fails_after_max_attempts`; unplugging a laptop waits for Phase 7 |
 | TC-33 | FR-21, NFR-13 | A new laptop joins with the pairing code in at most two interface steps | Planned (Phase 7) |
 | TC-34 | FR-22 | A worker with a different model hash is refused; one with an old corpus updates first | Planned (Phase 7) |
-| TC-35 | FR-24 | An interactive job is claimed before a queued background job | Planned (Phase 7) |
+| TC-35 | FR-24 | An interactive job is claimed before a queued background job | Pass: `test_queue.py::test_interactive_jobs_go_first` |
 | TC-36 | NFR-7 | After jobs finish, a worker's disk holds no job text | Planned (Phase 7) |
 
 ### 2.4 Web app, notes and reminders (FR-25 to FR-33)
@@ -149,7 +150,7 @@ Leave-one-out retrieval at 28 judgments ([reports/retrieval_baseline.md](reports
 | FR-13 | TC-25 |
 | FR-14 | TC-26 |
 | FR-15 | TC-27 |
-| FR-16 | TC-28 |
+| FR-16 | TC-28, TC-48 |
 | FR-17 | TC-29 |
 | FR-18 | TC-30 |
 | FR-19 | TC-31 |

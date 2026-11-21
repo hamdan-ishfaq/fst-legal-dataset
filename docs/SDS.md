@@ -177,6 +177,8 @@ Retrieves 6 statute units and 4 judgments, labels them `[S1]…`, `[C1]…`, add
 - Depth 1: sub-calls are plain model calls (Wang 2026 found depth 2 degrades results).
 - Sandbox: the REPL runs in a child process with a wall-clock limit, an output-size limit, a module whitelist and no file or network access. Tool calls go to the parent over a pipe, and the parent applies the user and matter scope.
 - Budgets per run: root turns, sub-calls, tokens, wall clock (FR-18).
+- Built as `fstlegal/rlm/` (D-009): `context` is preloaded with the case papers and the provisions and full judgments retrieved for the question, each headed by its id; the root model thinks before each turn; older turns are dropped when the history would overflow the 8k window; a claim may cite only ids a tool returned during the run.
+- The sandbox blocks `open` and every module outside a whitelist, and the parent serves only scoped data. It stops a confused model, not deliberately hostile Python (introspection can reach builtins), so the parent never gives the child data it may not see.
 
 ### 3.6 Verifier (Phase 6)
 1. **Existence:** every source label resolves to a statute unit or judgment in `corpus.db` (or a private document of the same matter).
@@ -197,6 +199,8 @@ Retrieves 6 statute units and 4 judgments, labels them `[S1]…`, `[C1]…`, add
 | `POST /cluster/jobs/{id}/heartbeat` | Extend the lease |
 | `POST /cluster/jobs/{id}/result` | Store the result; wake the waiting run |
 | `GET /cluster/corpus` | Download the current `corpus.db` (when the worker's hash differs) |
+
+Built so far (`fstlegal/cluster/`): the `jobs` table with atomic claims, leases, heartbeats, retries and priorities, and a worker that runs chat jobs against a llama-server. Local workers use the queue directly; the HTTP endpoints above come with remote workers in Phase 7.
 
 A worker sends its model hash and corpus hash with every claim; the hub refuses mismatches (FR-22). The hub's own local worker uses the same API, so one node and many nodes follow the same code path.
 
