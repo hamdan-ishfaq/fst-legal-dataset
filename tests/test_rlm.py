@@ -120,6 +120,16 @@ def test_rlm_retrieves_delegates_and_answers(corpus_parts):
 
 
 @pytest.mark.data
+def test_many_blocks_in_one_turn_still_fit_the_history(corpus_parts):
+    from fstlegal.rlm.engine import TURN_OUTPUT_CHARS
+    turns = ["\n".join(["```repl\nprint('x' * 4000)\n```"] * 20)]
+    _, root = run_rlm(corpus_parts, turns, Budget(max_turns=2))
+    fed_back = root.seen[1][-2]["content"]
+    assert fed_back.startswith("REPL output (block 1)")
+    assert len(fed_back) < TURN_OUTPUT_CHARS + 2000
+
+
+@pytest.mark.data
 def test_hidden_judgment_cannot_be_read(corpus_parts):
     corpus = corpus_parts[0]
     hidden = corpus.judgment_ids()[0]

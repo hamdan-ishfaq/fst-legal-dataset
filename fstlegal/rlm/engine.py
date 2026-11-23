@@ -34,6 +34,9 @@ from .tools import BudgetExceeded, LegalTools, SubCalls
 
 _CODE = re.compile(r"```repl\s*\n(.*?)\n```", re.DOTALL)  # upstream's block format
 CHARS_PER_TOKEN = 3.5  # rough, for keeping the history inside the context window
+# REPL output shown back per turn, shared by its blocks. The fine-tune writes up to ~20
+# blocks a turn; uncapped, their output overflowed the window and was dropped unseen.
+TURN_OUTPUT_CHARS = 6000
 
 
 @dataclass
@@ -164,6 +167,9 @@ class RLM:
                     if answer.get("ready") or reason:
                         break
                 if outputs:
+                    share = max(300, TURN_OUTPUT_CHARS // len(outputs))
+                    outputs = [o if len(o) <= share else o[:share] + "\n[... output truncated]"
+                               for o in outputs]
                     head = "REPL output:" if len(outputs) == 1 else "REPL output (block {}):"
                     messages.append({"role": "user", "content": "\n\n".join(
                         f"{head.format(i + 1)}\n{o}" for i, o in enumerate(outputs))})
