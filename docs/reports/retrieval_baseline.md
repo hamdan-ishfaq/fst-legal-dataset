@@ -56,3 +56,16 @@ Raw numbers: `retrieval_all.json`, `retrieval_specific.json`.
 
 1. Popularity as a prior inside the fusion, compared against this control.
 2. Re-run at full corpus size.
+
+## Contextual embeddings (2026-11-23)
+
+Each judgment chunk is now embedded with the judgment's title and keywords in front (`embedding_text`, scheme `ctx1`). The stored text is unchanged. The idea comes from our earlier German-law project, where embedding document names took recall@8 from 16.7% to 36.8%. Re-run with the same commands:
+
+| Mode | R@10 before | R@10 with context |
+|---|---|---|
+| Dense | 0.191 | 0.191 |
+| Hybrid | 0.245 | 0.245 |
+| Hybrid + graph | 0.376 | 0.391 |
+| BM25 + graph | **0.533** | **0.533** |
+
+This test scores statute units, whose chunks already start with their act and unit, so only the judgment hits feeding the graph changed. BM25 + graph stays the baseline's mode. The prefix is kept for the full-size re-run, where judgment search matters more (F2.1).

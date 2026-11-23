@@ -54,6 +54,23 @@ def _normalize(v: np.ndarray) -> np.ndarray:
     return v / np.maximum(norms, 1e-12)
 
 
+# Part of the cache name: bump when what is embedded changes
+EMBED_SCHEME = "ctx1"
+
+
+def embedding_text(corpus: Corpus, chunk: dict) -> str:
+    """What is embedded for a chunk. A judgment passage rarely says which case it
+    is from or what the case is about, so its title and keywords go in front
+    (statute chunks already start with their act and unit). The stored text,
+    which is what the model reads, is unchanged."""
+    if chunk["kind"] != "judgment":
+        return chunk["text"]
+    j = corpus.judgment(chunk["source_id"])
+    if not j:
+        return chunk["text"]
+    return f"{j['title']}. Subject: {', '.join(j['keywords'])}.\n\n{chunk['text']}"
+
+
 class VectorIndex:
     def __init__(self, ids: list[str], vectors: np.ndarray, meta: list[dict]):
         self.ids = ids
@@ -63,7 +80,7 @@ class VectorIndex:
     @classmethod
     def build(cls, corpus: Corpus, embedder: Embedder, cache_dir: Path) -> VectorIndex:
         safe = embedder.name.replace("/", "_").replace(":", "_")
-        path = cache_dir / f"vectors_{safe}_{corpus.content_hash[:12]}.npz"
+        path = cache_dir / f"vectors_{safe}_{corpus.content_hash[:12]}_{EMBED_SCHEME}.npz"
         chunks = corpus.chunks()
         if path.exists():
             data = np.load(path, allow_pickle=False)
@@ -71,7 +88,7 @@ class VectorIndex:
             ids = list(data["ids"])
         else:
             ids = [c["id"] for c in chunks]
-            vectors = embedder.embed([c["text"] for c in chunks])
+            vectors = embedder.embed([embedding_text(corpus, c) for c in chunks])
             cache_dir.mkdir(parents=True, exist_ok=True)
             np.savez(path, ids=np.array(ids), vectors=vectors)
         by_id = {c["id"]: c for c in chunks}

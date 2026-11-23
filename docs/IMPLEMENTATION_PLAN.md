@@ -459,6 +459,92 @@ Phases 2 and 3 can run in parallel. Phases 7 and 8 can run in parallel once Phas
 
 ---
 
+## 3A. Status at mid-defense and the plan for FYDP-II (updated 2026-11-23)
+
+### Where each phase stands
+
+| Phase | Status | Evidence |
+|---|---|---|
+| 0 Foundation | Done | Repository, tests (122), ruff, DECISIONS.md |
+| 1 Corpus | Done for the sample: 28 judgments, 9 statutes | `corpus_quality.md` |
+| 2 Graph and retrieval | Done; BM25 + graph is the best mode (recall@10 0.533) | `retrieval_baseline.md` |
+| 3 Model serving | Done on one laptop: Qwen3-8B Q4_K_M, fully on the GPU | `scripts/serve.py`, D-002 |
+| 4 Baseline pipeline | Done and verified against the LLM alone, on short questions and long case files | `rlm_vs_baseline.md` |
+| 5 RLM engine | Built and tested; worse than the baseline on the base model; the community fine-tune collapses after two turns | `rlm_vs_baseline.md`, D-009 |
+| 6 Verification | Citation check done (every kept claim cites a real source); claim-support check not started | `check_citations` |
+| 7 Cluster | Queue and local workers done; network workers not started | `cluster/`, TC-28 to TC-32 |
+| 8–9, 11 | Not started (design in the SDS) | — |
+| 10 Evaluation | Gold set E1, the long case-file set and the closed-book reference done; E2–E4 not started | `docs/reports/` |
+
+### What the measurements changed
+
+1. Retrieval decides brief quality more than the reasoning loop does. Each gain so far came from what reaches the model:
+   - provisions the case papers name: long-file recall went from 0.17 to 0.57;
+   - provisions similar cases applied: gold provisions among the sources went from 22 to 32 of 67.
+2. Without retrieval, the same model makes up about 11 citations per brief. The system's value is the evidence it gathers and checks.
+3. The RLM pays off only where the input is far larger than one call can hold, and only with a model trained for its scaffold. It becomes a routed component, not the default path.
+
+### FYDP-II phases, in order
+
+Effort is in working days and is an estimate. Each phase ends with its exit check recorded in the test plan.
+
+**F1. Corpus at full size** (about 5 days; Phase 1)
+- F1.1 Scrape and enrich the full set of FST judgments (about 2,000), keeping the sample's checks: truncation flag, outcome normalization, the law-reference resolver.
+- F1.2 Add the remaining statutes the judgments cite most (the coverage report lists them), with version and amendment dates.
+- F1.3 Re-run the retrieval evaluation at full size before any claim in the thesis.
+- *Exit:* the corpus quality report at full size; resolved law references at 90% or more; the retrieval table re-run.
+
+**F2. Retrieval round 2** (about 4 days; Phase 2)
+- F2.1 Contextual embeddings: a judgment's title and keywords are embedded with each of its chunks (`EMBED_SCHEME`). Keep them only if dense or hybrid recall improves on E1.
+- F2.2 Popularity as a prior inside the fusion, compared against the popularity control.
+- F2.3 Tune the source mix (named, retrieved, applied by similar cases) on a held-out half of the judgments, not on the set it is reported on.
+- F2.4 Cross-encoder reranking, measured on E1. Our earlier German-law project found it worse than BM25 order, so it stays off unless it helps here.
+- *Exit:* a retrieval report with confidence intervals; one chosen configuration logged in DECISIONS.md.
+
+**F3. RLM that earns its place** (about 8 days; Phases 5–6)
+- F3.1 Match the fine-tune's training scaffold: take the prompts, answer syntax and REPL feedback format from the authors' repository at the version the model was trained with. Re-test the community Q4_K_M, then a Q4_K_M quantized here from the official weights (`scripts/quantize_rlm.py`), to rule out quantization damage.
+- F3.2 Final writer: the RLM's notes plus the baseline's sources go into one schema-constrained call that writes the brief, so the RLM cannot cite less than retrieval found.
+- F3.3 Router (FR-21): questions with no case papers, or papers that fit one call, use the baseline; longer papers use the RLM. Sweep the length threshold on the long set.
+- F3.4 A long-input set built from real multi-document case papers (100k+ characters), where one call holds a small part of the input.
+- F3.5 A fact-coverage metric: does the brief use facts that appear only beyond the first 9,000 characters?
+- *Exit (H1):* on the long set, routed system ≥ baseline on recall and better on fact coverage, or a documented negative result with traces.
+
+**F4. Claim verification** (about 4 days; Phase 6)
+- F4.1 A support check: a sub-call asks whether the cited passage supports each claim; unsupported claims are removed or flagged.
+- F4.2 A hand-labelled sample of 50 claims to measure the check's own precision.
+- F4.3 Abstention on E4: questions about provisions that do not exist.
+- *Exit:* unsupported-claim rate reported for the baseline vs the full system (NFR-2).
+
+**F5. Network workers** (about 6 days; Phase 7)
+- F5.1 The hub serves the queue over HTTPS; workers long-poll, heartbeat and post results (the SQLite queue already has leases and retries).
+- F5.2 Pairing with a one-time code; a worker checks the model hash and corpus version before taking jobs.
+- F5.3 Every job carries its run, user and matter. A worker receives only that job's prompt text, never the corpus or another matter's papers.
+- *Exit (H2):* one node vs two nodes on the same runs; unplugging a worker mid-job requeues the job (TC-32 over the network).
+
+**F6. Web app with per-user isolation** (about 10 days; Phase 8)
+- F6.1 Accounts with administrator and lawyer roles; Argon2 password hashes; short-lived session tokens; rate limits on login and on runs.
+- F6.2 Isolation in the data layer: one access function filters every matter, document, run and note by owner or membership. A request for someone else's matter returns 404, not 403, so its existence is not revealed. SQLite has no row-level security, so this single function is the boundary, and every endpoint is tested against it (NFR-8).
+- F6.3 Uploads: check type and size, extract text in a separate process (OCR for scans), and store per matter. Case papers are data, never instructions (NFR-10, with injection test documents).
+- F6.4 Hash-chained audit log: each entry stores the hash of the previous one, so edits are detectable (FR-29).
+- F6.5 Ask page with live progress (turns, sub-calls, queue position) and a source viewer.
+- *Exit:* the access tests pass on every endpoint; a lawyer completes upload, question and brief without the command line.
+
+**F7. Caching** (about 3 days; after F6)
+- F7.1 Exact cache: the key is corpus version + matter + question + a hash of the case papers. The matter is in the key, so one lawyer's answer is never served to another. A corpus rebuild changes the version, so stale answers become unreachable.
+- F7.2 Semantic cache, served only when the reworded question also cites the same provisions. In the German-law project this served 27 of 45 rewordings with no wrong answer on 103 near misses. The reuse is labelled in the UI, and the cache can be switched off.
+- F7.3 Embedding and vector caches already exist (per corpus hash and model).
+- *Exit:* the hit rate and wrong-hit count on a written set of rewordings and near misses.
+
+**F8. Hearing notes and reminders** (about 5 days; Phase 9, unchanged)
+
+**F9. Final evaluation and packaging** (about 8 days; Phases 10–11)
+- F9.1 H1 to H4 on the full corpus. H3: a larger model with CPU offload. H4: the quantization sweep.
+- F9.2 Lawyer-graded set (E3), if practising lawyers are available.
+- F9.3 Hub and worker installers, backup and restore, an admin health page, user and admin guides.
+- *Exit:* every metric in Phase 10 has a value and the command that produced it; a clean install succeeds from the guides alone.
+
+Order and overlap: F1 → F2 → F3 → F4 on the research path. F5 and F6 can run alongside F3–F4. F7 needs F6; F8 needs F6. F9 comes last. Total, about 53 working days.
+
 ## 4. Documentation deliverables and where they come from
 
 | Deliverable | Content source | Phase |
