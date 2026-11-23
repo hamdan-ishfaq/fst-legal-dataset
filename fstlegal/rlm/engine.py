@@ -195,15 +195,16 @@ class RLM:
 
 
 def local_rlm(server: str = "http://127.0.0.1:8080", workers: int = 1,
-              budget: Budget | None = None) -> tuple[RLM, list[Worker]]:
+              budget: Budget | None = None, think: bool = True) -> tuple[RLM, list[Worker]]:
     """An RLM whose sub-calls are run by ``workers`` local workers against one
     server: the single-laptop setup. Remote workers join the same queue later."""
     corpus = Corpus()
     graph = CorpusGraph(corpus)
     queue = JobQueue()
     pool = [Worker(queue, ChatClient(server), f"local-{i + 1}").start() for i in range(workers)]
-    # The root plans each turn, so it thinks first (Qwen3 thinking mode); sub-calls do not
-    root = ChatClient(server, extra_body={"chat_template_kwargs": {"enable_thinking": True}})
+    # The base model plans better thinking first (Qwen3 thinking mode); the fine-tune was trained
+    # on trajectories without thinking, so it runs with ``think=False``. Sub-calls never think.
+    root = ChatClient(server, extra_body={"chat_template_kwargs": {"enable_thinking": think}})
     return RLM(corpus, Retriever(corpus, graph), graph, root, queue, budget), pool
 
 
@@ -212,8 +213,9 @@ def main() -> None:
     parser.add_argument("question")
     parser.add_argument("--server", default="http://127.0.0.1:8080")
     parser.add_argument("--trace", help="write the run trace to this JSON file")
+    parser.add_argument("--no-think", action="store_true", help="root model without thinking")
     args = parser.parse_args()
-    rlm, pool = local_rlm(args.server)
+    rlm, pool = local_rlm(args.server, think=not args.no_think)
     try:
         result = rlm.run(args.question)
     finally:

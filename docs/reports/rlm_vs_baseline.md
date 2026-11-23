@@ -78,6 +78,14 @@ The RLM's citation existence rate in `rlm_long.json` reads 0.93 because the chec
 - Caveat: these case files are the judgments' own reasoning, which names provisions more consistently than a petition would; on real case papers the gain should be smaller.
 - The RLM long run predates the change; the RLM now gets the named provisions in its context too, but has not been re-run.
 
+## Fine-tuned root model (community Q4_K_M): not yet usable
+
+Six long-set runs all ended at the turn limit with no answer. Traces of one question (`runtime/ft_trace*.json`, not committed) show:
+- It writes 13–21 code blocks in its first turn without waiting for output. Their combined output overflowed the window and was dropped, which is now fixed (`TURN_OUTPUT_CHARS`).
+- With the output visible, and with thinking on or off, it still stops writing code after turn 2 and repeats `You responded with: [Answer] Yes` until the limit.
+
+The model card says only that the model "assumes the environment/scaffold from our RLM repo", without naming a version. The likely cause is that our prompts (rlms 0.1.3) differ from the scaffold it was trained on: final-answer syntax, the per-turn prompt, how REPL output is fed back. It could also be quantization damage. Matching the training scaffold is FYDP-II work.
+
 ## Next
 
 1. Re-run the RLM long set with named provisions (about 35 minutes), and the same two runs with the RLM fine-tune (community Q4_K_M, `rlm_community`); then one table: baseline vs RLM base vs RLM fine-tuned, short and long.
