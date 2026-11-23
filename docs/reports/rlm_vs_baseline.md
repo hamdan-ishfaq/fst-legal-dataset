@@ -76,6 +76,13 @@ The RLM's citation existence rate in `rlm_long.json` reads 0.93 because the chec
 - Without retrieval the model cites rules and cases that do not exist (e.g. a "Pakistan Administrative Service (Disciplinary Proceedings) Rules, 1973"), about 11 per brief; three quarters of its claims are removed. The system answers with checked citations.
 - On long files the LLM alone first scored higher than the baseline: the case file names its provisions and the model copied the names, while the baseline could cite only what retrieval found from the question. Reading the named provisions as sources fixes this: the gold provisions among the sources go from 12 to 30 of 47, and recall from 0.171 to 0.574.
 - Caveat: these case files are the judgments' own reasoning, which names provisions more consistently than a petition would; on real case papers the gain should be smaller.
+- With the provisions similar cases applied also added (8 statute slots of 1,000 characters, `statute_ids`), the long run gives:
+  - recall 0.553, level with 0.574 given run-to-run variation, as expected since the sources' gold coverage only moved from 30 to 31 of 47;
+  - claims removed down from 17.2% to **14.0%**;
+  - **0** invalid citations;
+  - 16.7 claims kept, 46 s per brief.
+
+  `baseline_long.json` now holds this run. The short-set re-run, where the change matters most (22 to 32 of 67 gold provisions in the sources), was stopped at 23 of 28 by low memory. Its partial log shows 18.4 claims kept and 12% removed; recall is pending a full run.
 - The RLM long run predates the change; the RLM now gets the named provisions in its context too, but has not been re-run.
 
 ## Fine-tuned root model (community Q4_K_M): not yet usable
