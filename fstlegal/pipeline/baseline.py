@@ -13,6 +13,7 @@ import argparse
 import json
 from dataclasses import dataclass, field
 
+from ..corpus.laws import mentions
 from ..llm.client import ChatClient
 from ..retrieval.hybrid import Ranked, Retriever
 from ..retrieval.store import Corpus
@@ -73,15 +74,23 @@ def unit_citation(corpus: Corpus, unit_id: str) -> str:
     return f"{word} {number}, {corpus.act_title(act_id)}"
 
 
+def named_units(corpus: Corpus, text: str, limit: int = 4) -> list[str]:
+    """Provisions the case papers name that the corpus holds, first mentioned first."""
+    return [u for u in mentions(text) if corpus.unit(u)][:limit]
+
+
 def gather_sources(corpus: Corpus, retriever: Retriever, question: str,
                    n_statutes: int = 6, n_cases: int = 4,
-                   exclude: set[str] | None = None) -> list[Source]:
-    sources: list[Source] = []
+                   exclude: set[str] | None = None, case_papers: str = "") -> list[Source]:
+    # Provisions the case papers name come first; retrieval fills the remaining slots
+    named = named_units(corpus, case_papers)
     statutes: list[Ranked] = retriever.search_statutes(question, n_statutes, exclude)
-    for i, r in enumerate(statutes, 1):
-        unit = corpus.unit(r.id)
+    ids = (named + [r.id for r in statutes if r.id not in named])[:n_statutes]
+    sources: list[Source] = []
+    for i, unit_id in enumerate(ids, 1):
+        unit = corpus.unit(unit_id)
         if unit:
-            sources.append(Source(f"S{i}", r.id, unit_citation(corpus, r.id),
+            sources.append(Source(f"S{i}", unit_id, unit_citation(corpus, unit_id),
                                   f"{unit['title']}: {unit['text'][:1500]}"))
     for i, r in enumerate(retriever.search_cases(question, n_cases, exclude), 1):
         j = corpus.judgment(r.id)
@@ -122,7 +131,8 @@ def check_citations(raw: dict, sources: list[Source]) -> Brief:
 
 def answer(question: str, corpus: Corpus, retriever: Retriever, llm: ChatClient,
            case_papers: str = "", exclude: set[str] | None = None) -> Brief:
-    sources = gather_sources(corpus, retriever, question, exclude=exclude)
+    sources = gather_sources(corpus, retriever, question, exclude=exclude,
+                             case_papers=case_papers)
     raw = llm.complete_json(build_messages(question, sources, case_papers), BRIEF_SCHEMA)
     brief = check_citations(raw, sources)
     brief.question = question

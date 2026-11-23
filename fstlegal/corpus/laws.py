@@ -124,6 +124,18 @@ def unit_id(act: Act, num: str) -> str:
     return f"{act.id}:{act.unit_kind}-{normalize_number(num)}"
 
 
+def mentions(text: str, window: int = 100) -> list[str]:
+    """Statute-unit ids named in running text such as "under Rule 4(1)(b) of the
+    E&D Rules, 1973", in order of first mention. The act is read from the words
+    just after each unit number."""
+    found: list[str] = []
+    for m in _UNIT_RE.finditer(text):
+        for unit in resolve(m.group(0), text[m.end():m.end() + window]).unit_ids:
+            if unit not in found:
+                found.append(unit)
+    return found
+
+
 def resolve(provision: str, act_text: str) -> LawRef:
     """Resolve one ``laws_json`` entry. Both fields are read together because
     the scraper sometimes put the act name in ``provision``."""

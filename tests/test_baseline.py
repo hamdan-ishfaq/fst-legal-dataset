@@ -100,3 +100,11 @@ def test_baseline_on_live_model():
         for label in claim["sources"]:
             ref = brief.sources[label].ref_id
             assert ref in corpus.unit_ids() or corpus.judgment(ref)
+
+
+def test_mentions_reads_the_act_after_each_unit_number():
+    from fstlegal.corpus.laws import mentions
+    text = ("The appeal under Section 4 of the Service Tribunals Act, 1973 was late. "
+            "He was removed under Rule 4(1)(b) of the Efficiency and Discipline Rules, 1973, "
+            "and Article 212 of the Constitution bars other courts. Section 4 again.")
+    assert mentions(text) == ["STA-1973:s-4", "ED-1973:r-4", "CONST-1973:art-212"]
