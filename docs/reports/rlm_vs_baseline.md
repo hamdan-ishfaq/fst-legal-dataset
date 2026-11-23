@@ -82,7 +82,14 @@ The RLM's citation existence rate in `rlm_long.json` reads 0.93 because the chec
   - **0** invalid citations;
   - 16.7 claims kept, 46 s per brief.
 
-  `baseline_long.json` now holds this run. The short-set re-run, where the change matters most (22 to 32 of 67 gold provisions in the sources), was stopped at 23 of 28 by low memory. Its partial log shows 18.4 claims kept and 12% removed; recall is pending a full run.
+  `baseline_long.json` now holds this run. The short set was re-run too (`baseline_verification.json` now holds it):
+  - gold provision recall **0.269 → 0.343**;
+  - 17.7 claims kept;
+  - 15.5% removed;
+  - 0 invalid citations;
+  - 43 s per brief.
+
+  Against the LLM alone (0.075) that is 4.6 times the recall, with no made-up citations.
 - The RLM long run predates the change; the RLM now gets the named provisions in its context too, but has not been re-run.
 
 ## Fine-tuned root model (community Q4_K_M): not yet usable
