@@ -7,7 +7,8 @@ appear among the cited statute sources, tokens and time.
 
 Run (with ``python scripts/serve.py chat`` running):
 ``python -m fstlegal.eval.baseline_check --out docs/reports/baseline_verification.json``
-``python -m fstlegal.eval.baseline_check --pipeline rlm --out docs/reports/rlm_verification.json``
+`python -m fstlegal.eval.baseline_check --pipeline rlm --out docs/reports/rlm_verification.json`
+`--pipeline closed` is the same model with no retrieval, citing from memory.
 
 With ``--long``, each question comes with a long case file: the hidden judgment's
 own text up to its order (facts, arguments, reasoning; the result cut off), for
@@ -24,6 +25,7 @@ from pathlib import Path
 from statistics import mean
 
 from ..llm.client import ChatClient
+from ..pipeline import closed_book
 from ..pipeline.baseline import SECTIONS, answer
 from ..retrieval.graph import CorpusGraph
 from ..retrieval.hybrid import Retriever
@@ -48,6 +50,7 @@ def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool =
     retriever = Retriever(corpus, graph)
     llm = ChatClient(server)
     rlm, pool = local_rlm(server) if pipeline == "rlm" else (None, [])
+    resolver = closed_book.Resolver(corpus) if pipeline == "closed" else None
     rows = []
     ids = corpus.judgment_ids()
     if long:
@@ -66,7 +69,8 @@ def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool =
                      "subcalls": result.subcalls, "tokens": result.tokens}
         else:
             try:
-                brief = answer(question, corpus, retriever, llm, papers, exclude={jid})
+                brief = (closed_book.answer(question, corpus, llm, papers, resolver) if resolver
+                         else answer(question, corpus, retriever, llm, papers, exclude={jid}))
             except json.JSONDecodeError:  # the window filled up before the JSON closed
                 brief = None
             call = llm.log[-1]
@@ -107,6 +111,7 @@ def run(limit: int | None, server: str, pipeline: str = "baseline", long: bool =
         / max(1, sum(r["claims_kept"] + r["claims_removed"] for r in rows)),
         "gold_provision_recall": (sum(r["gold_provisions_cited"] for r in with_gold)
                                   / max(1, sum(r["gold_provisions"] for r in with_gold))),
+        "mean_invalid_citations": mean(r["invalid_citations"] for r in rows),
         "mean_seconds": mean(r["seconds"] for r in rows),
         "mean_tokens": mean(r["tokens"] for r in rows),
     }
@@ -122,7 +127,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--server", default="http://127.0.0.1:8080")
-    parser.add_argument("--pipeline", choices=("baseline", "rlm"), default="baseline")
+    parser.add_argument("--pipeline", choices=("baseline", "closed", "rlm"), default="baseline")
     parser.add_argument("--long", action="store_true", help="add a long case file to each question")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
