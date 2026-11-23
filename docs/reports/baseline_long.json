@@ -5,24 +5,25 @@
   "summary": {
     "runs": 14,
     "citation_existence_rate": 1,
-    "mean_claims_kept": 14,
-    "share_of_claims_removed": 0.216,
-    "gold_provision_recall": 0.17073170731707318,
-    "mean_seconds": 46.56428571428572,
-    "mean_tokens": 7533.642857142857
+    "mean_claims_kept": 16.5,
+    "share_of_claims_removed": 0.17204301075268819,
+    "gold_provision_recall": 0.574468085106383,
+    "mean_invalid_citations": 0.42857142857142855,
+    "mean_seconds": 47.199999999999996,
+    "mean_tokens": 7455.5
   },
   "runs": [
     {
       "judgment": "J-190153",
       "question": "Does the use of a question-and-answer format in a disciplinary inquiry, without allowing cross-examination, violate the Government Servants (Efficiency and Discipline) Rules 1973?",
-      "claims_kept": 15,
-      "claims_removed": 4,
+      "claims_kept": 16,
+      "claims_removed": 6,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 5,
-      "gold_provisions_cited": 0,
-      "seconds": 51.8,
-      "tokens": 7766
+      "gold_provisions_cited": 2,
+      "seconds": 48.0,
+      "tokens": 7652
     },
     {
       "judgment": "J-190614",
@@ -32,130 +33,129 @@
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 6,
-      "gold_provisions_cited": 1,
-      "seconds": 48.8,
-      "tokens": 7484
+      "gold_provisions_cited": 2,
+      "seconds": 48.4,
+      "tokens": 7234
     },
     {
       "judgment": "J-191436",
       "question": "Whether a major penalty of dismissal from service can be sustained when an inquiry is conducted merely through a questionnaire without affording the accused an opportunity to cross-examine witnesses?",
-      "claims_kept": 21,
-      "claims_removed": 1,
+      "claims_kept": 17,
+      "claims_removed": 4,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 0,
       "gold_provisions_cited": 0,
-      "seconds": 49.5,
-      "tokens": 7753
+      "seconds": 40.9,
+      "tokens": 7512
     },
     {
       "judgment": "J-191625",
       "question": "Can the Finance Division unilaterally issue a clarification to curtail service benefits without consulting the Establishment Division as required by the Rules of Business, 1973?",
       "claims_kept": 21,
-      "claims_removed": 0,
+      "claims_removed": 1,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 2,
-      "gold_provisions_cited": 0,
-      "seconds": 44.8,
-      "tokens": 7003
+      "gold_provisions_cited": 2,
+      "seconds": 56.7,
+      "tokens": 7088
     },
     {
       "judgment": "J-192080",
       "question": "Does the intermingling of the functions of the 'Authorized Officer' and the 'Authority' under the Government Servants (Efficiency and Discipline) Rules, 1973 vitiate disciplinary proceedings?",
-      "claims_kept": 0,
-      "claims_removed": 0,
+      "claims_kept": 19,
+      "claims_removed": 3,
       "invalid_citations": 0,
       "all_citations_exist": true,
-      "gold_provisions": 0,
-      "gold_provisions_cited": 0,
-      "seconds": 59.9,
-      "tokens": 8192,
-      "reason": "answer cut off at the context limit"
+      "gold_provisions": 6,
+      "gold_provisions_cited": 5,
+      "seconds": 51.3,
+      "tokens": 7949
     },
     {
       "judgment": "J-193418",
       "question": "Whether disciplinary proceedings are vitiated if a court of inquiry is conducted prior to the issuance of a formal charge sheet?",
-      "claims_kept": 15,
-      "claims_removed": 3,
+      "claims_kept": 21,
+      "claims_removed": 4,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 4,
-      "gold_provisions_cited": 1,
-      "seconds": 51.2,
-      "tokens": 7677
+      "gold_provisions_cited": 3,
+      "seconds": 59.3,
+      "tokens": 7466
     },
     {
       "judgment": "J-193697",
       "question": "Does the deferment of a civil servant for incomplete records constitute a permanent bar to seniority or merely a temporary disability?",
-      "claims_kept": 9,
-      "claims_removed": 13,
-      "invalid_citations": 9,
+      "claims_kept": 14,
+      "claims_removed": 7,
+      "invalid_citations": 6,
       "all_citations_exist": true,
       "gold_provisions": 5,
-      "gold_provisions_cited": 2,
-      "seconds": 42.6,
-      "tokens": 6691
+      "gold_provisions_cited": 3,
+      "seconds": 42.3,
+      "tokens": 6573
     },
     {
       "judgment": "J-194008",
       "question": "Does the failure of a public functionary to provide reasons for an administrative order violate Section 24A of the General Clauses Act 1897?",
-      "claims_kept": 14,
-      "claims_removed": 6,
+      "claims_kept": 22,
+      "claims_removed": 0,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 2,
       "gold_provisions_cited": 1,
-      "seconds": 52.7,
-      "tokens": 7850
+      "seconds": 49.3,
+      "tokens": 7763
     },
     {
       "judgment": "J-194044",
       "question": "Whether an employee deferred for promotion due to pending inquiries is entitled to proforma promotion upon subsequent exoneration?",
-      "claims_kept": 14,
-      "claims_removed": 7,
-      "invalid_citations": 0,
-      "all_citations_exist": true,
-      "gold_provisions": 1,
-      "gold_provisions_cited": 0,
-      "seconds": 41.3,
-      "tokens": 7958
-    },
-    {
-      "judgment": "J-194284",
-      "question": "Whether a departmental inquiry conducted primarily through a questionnaire satisfies the legal requirements of a regular inquiry under the relevant disciplinary rules?",
       "claims_kept": 12,
       "claims_removed": 7,
       "invalid_citations": 0,
       "all_citations_exist": true,
-      "gold_provisions": 4,
+      "gold_provisions": 1,
       "gold_provisions_cited": 1,
-      "seconds": 41.0,
-      "tokens": 7342
+      "seconds": 45.1,
+      "tokens": 8054
+    },
+    {
+      "judgment": "J-194284",
+      "question": "Whether a departmental inquiry conducted primarily through a questionnaire satisfies the legal requirements of a regular inquiry under the relevant disciplinary rules?",
+      "claims_kept": 15,
+      "claims_removed": 4,
+      "invalid_citations": 0,
+      "all_citations_exist": true,
+      "gold_provisions": 4,
+      "gold_provisions_cited": 2,
+      "seconds": 42.3,
+      "tokens": 7008
     },
     {
       "judgment": "J-195295",
       "question": "Whether an employee appointed on a temporary basis who serves continuously for a long period acquires the status of a regular employee?",
-      "claims_kept": 21,
-      "claims_removed": 3,
+      "claims_kept": 20,
+      "claims_removed": 2,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 5,
-      "gold_provisions_cited": 1,
-      "seconds": 46.8,
-      "tokens": 7113
+      "gold_provisions_cited": 2,
+      "seconds": 42.8,
+      "tokens": 7256
     },
     {
       "judgment": "J-234011",
       "question": "Can a retired employee retain official government accommodation beyond the prescribed grace period until all pensionary dues are cleared?",
-      "claims_kept": 18,
-      "claims_removed": 1,
+      "claims_kept": 17,
+      "claims_removed": 5,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 4,
-      "gold_provisions_cited": 0,
-      "seconds": 44.5,
-      "tokens": 7532
+      "gold_provisions_cited": 2,
+      "seconds": 46.4,
+      "tokens": 7388
     },
     {
       "judgment": "J-235838",
@@ -166,21 +166,21 @@
       "all_citations_exist": true,
       "gold_provisions": 0,
       "gold_provisions_cited": 0,
-      "seconds": 30.6,
+      "seconds": 30.4,
       "tokens": 8192,
       "reason": "answer cut off at the context limit"
     },
     {
       "judgment": "J-237298",
       "question": "Whether major penalties of dismissal and imprisonment can be imposed upon a Frontier Corps personnel without issuing a formal charge sheet and providing an opportunity of defense?",
-      "claims_kept": 14,
-      "claims_removed": 8,
+      "claims_kept": 15,
+      "claims_removed": 4,
       "invalid_citations": 0,
       "all_citations_exist": true,
       "gold_provisions": 3,
-      "gold_provisions_cited": 0,
-      "seconds": 46.4,
-      "tokens": 6918
+      "gold_provisions_cited": 2,
+      "seconds": 57.6,
+      "tokens": 7242
     }
   ]
 }
